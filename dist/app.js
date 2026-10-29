@@ -2245,20 +2245,6 @@ function AuthModal({
           </div>
         )}
 
-        {/* 1-Click Demo Login Bar */}
-        <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#EFECE6] flex items-center justify-between text-xs">
-          <span className="font-semibold text-gray-600">Quick Test:</span>
-          <button
-            onClick={() => {
-              setLoginEmail('alex@example.com');
-              setLoginPassword('Password123!');
-            }}
-            className="px-2.5 py-1 bg-white border border-[#EFECE6] hover:border-[#DE5426] rounded-lg font-bold text-gray-800"
-          >
-            Fill Demo (Alex Morgan)
-          </button>
-        </div>
-
         {/* LOGIN FORM */}
         {authTab === 'login' && (
           <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs">
@@ -2268,7 +2254,7 @@ function AuthModal({
                 type="email"
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="alex@example.com"
+                placeholder="you@example.com"
                 className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl focus:outline-none focus:border-[#DE5426]"
                 required
               />
@@ -2337,7 +2323,7 @@ function AuthModal({
                 type="email"
                 value={regEmail}
                 onChange={(e) => setRegEmail(e.target.value)}
-                placeholder="alex@example.com"
+                placeholder="you@example.com"
                 className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl focus:outline-none focus:border-[#DE5426]"
                 required
               />
@@ -2400,7 +2386,7 @@ function AuthModal({
                 type="email"
                 value={forgotEmail}
                 onChange={(e) => setForgotEmail(e.target.value)}
-                placeholder="alex@example.com"
+                placeholder="you@example.com"
                 className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl"
                 required
               />
