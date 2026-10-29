@@ -90,8 +90,34 @@ async function runDeploymentTests() {
       const indexContent = fs.readFileSync(distIndex, 'utf8');
       assert(indexContent.match(/app\.js\?v=/), 'dist/index.html must have cache-busting query on app.js');
       assert(indexContent.match(/dashboard-components\.js\?v=/), 'dist/index.html must have cache-busting query on dashboard-components.js');
+      assert(indexContent.match(/initial-data\.js\?v=/), 'dist/index.html must have cache-busting query on initial-data.js');
       assert(indexContent.includes('Cache-Control'), 'dist/index.html must include cache-control meta tags');
       console.log('✓ PASS: Cache-busting query strings & freshness meta tags verified in dist/index.html');
+      pass++;
+
+      // 9. Pre-hydrated catalog verification in dist/initial-data.js
+      const distInitial = path.join(__dirname, '..', 'dist', 'initial-data.js');
+      assert(fs.existsSync(distInitial), 'dist/initial-data.js must exist');
+      const initialContent = fs.readFileSync(distInitial, 'utf8');
+      assert(initialContent.includes('window.__MAI_INITIAL_DATA__'), 'initial-data.js must define window.__MAI_INITIAL_DATA__');
+      assert(initialContent.includes('PVC Door Installation'), 'initial-data.js must include PVC Door Installation service');
+      console.log('✓ PASS: Pre-hydrated marketplace catalog verified in dist/initial-data.js');
+      pass++;
+
+      // 10. Netlify Serverless Function handler verification
+      const { handler } = require('../netlify/functions/api');
+      const mockEvent = {
+        httpMethod: 'GET',
+        path: '/.netlify/functions/api/categories',
+        headers: { accept: 'application/json' },
+        queryStringParameters: {}
+      };
+      const funcRes = await handler(mockEvent, {});
+      assert.strictEqual(funcRes.statusCode, 200, 'Netlify function must return 200 for /api/categories');
+      assert(funcRes.headers['content-type'].includes('application/json'), 'Netlify function must return application/json');
+      const catsData = JSON.parse(funcRes.body);
+      assert(Array.isArray(catsData) && catsData.length >= 6, 'Netlify function must return all categories');
+      console.log('✓ PASS: Netlify Serverless Function handles requests and returns live JSON data');
       pass++;
 
       console.log('\n====================================================');

@@ -24,6 +24,25 @@ if (fs.existsSync(DIST_DIR)) {
 fs.mkdirSync(DIST_DIR, { recursive: true });
 console.log(`[INIT] Created fresh dist/ directory at: ${DIST_DIR}`);
 
+// 2b. Generate client/public/initial-data.js from server/data/db.json for instant rendering
+const dbFilePath = path.join(ROOT_DIR, 'server', 'data', 'db.json');
+if (fs.existsSync(dbFilePath)) {
+  try {
+    const dbData = JSON.parse(fs.readFileSync(dbFilePath, 'utf8'));
+    const initialPayload = {
+      categories: dbData.categories || [],
+      subcategories: dbData.subcategories || [],
+      services: dbData.services || [],
+      professionals: dbData.professionals || []
+    };
+    const initialDataContent = `// Pre-hydrated marketplace data from authoritative database\nwindow.__MAI_INITIAL_DATA__ = ${JSON.stringify(initialPayload, null, 2)};\n`;
+    fs.writeFileSync(path.join(CLIENT_PUBLIC_DIR, 'initial-data.js'), initialDataContent, 'utf8');
+    console.log('[HYDRATE] Generated client/public/initial-data.js from db.json');
+  } catch (err) {
+    console.warn('[WARN] Could not generate initial-data.js:', err.message);
+  }
+}
+
 // Helper: Copy directory recursively
 function copyDirSync(src, dest) {
   if (!fs.existsSync(dest)) {
@@ -56,18 +75,17 @@ if (!fs.existsSync(distAssetsDir)) {
   console.log('[EMIT] dist/assets/ (directory created)');
 }
 
-// Ensure SPA fallback _redirects exists in dist/
+// Ensure API proxy and SPA fallback _redirects exists in dist/
 const redirectsFile = path.join(DIST_DIR, '_redirects');
-if (!fs.existsSync(redirectsFile)) {
-  fs.writeFileSync(redirectsFile, '/* /index.html 200\n', 'utf8');
-  console.log('[EMIT] dist/_redirects (created SPA fallback)');
-}
+fs.writeFileSync(redirectsFile, '/api/*    /.netlify/functions/api/:splat    200!\n/*        /index.html                       200\n', 'utf8');
+console.log('[EMIT] dist/_redirects (configured Netlify function proxy & SPA fallback)');
 
 // 4. Inject Dynamic Cache-Buster Build ID into dist/index.html
 const buildHash = 'v' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 7);
 const indexPath = path.join(DIST_DIR, 'index.html');
 if (fs.existsSync(indexPath)) {
   let htmlContent = fs.readFileSync(indexPath, 'utf8');
+  htmlContent = htmlContent.replace(/initial-data\.js(\?v=[^"']*)?/g, `initial-data.js?v=${buildHash}`);
   htmlContent = htmlContent.replace(/dashboard-components\.js(\?v=[^"']*)?/g, `dashboard-components.js?v=${buildHash}`);
   htmlContent = htmlContent.replace(/app\.js(\?v=[^"']*)?/g, `app.js?v=${buildHash}`);
   htmlContent = htmlContent.replace(/content="[^"]*"\s+name="mai-build-version"/g, `name="mai-build-version" content="${buildHash}"`);
@@ -77,7 +95,7 @@ if (fs.existsSync(indexPath)) {
 
 // 5. Verify Critical Production Files in dist/
 console.log('\n[VERIFY] Validating production build output...');
-const criticalFiles = ['index.html', 'app.js', 'dashboard-components.js', '_redirects'];
+const criticalFiles = ['index.html', 'initial-data.js', 'app.js', 'dashboard-components.js', '_redirects'];
 let buildOk = true;
 
 criticalFiles.forEach(file => {

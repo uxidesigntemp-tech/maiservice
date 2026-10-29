@@ -1,11 +1,11 @@
 {
   "users": [
     {
-      "id": "usr-1793270375112",
+      "id": "usr-1793276435426",
       "name": "New Test Customer",
-      "email": "test.user.1793270375080@example.com",
-      "passwordHash": "b22aecc281742fd4f3c359604ff9635cc582fd234750fd70b8c17956413b52c837454a7c38ef40b6b7e59d870fb049526835ebfd9a7d6d3c8083833e8392e648",
-      "salt": "eecf008ebbc9ae553d732b3ec5d7f1c8",
+      "email": "test.user.1793276435355@example.com",
+      "passwordHash": "081c20b385efdf9e0ea955c1077da55a2eb747da745c8619c2e05273df3eb9ec6965b4695a9649ce352c964c389f9e3e5bf5c983c76db53dc2d8e003aa642abe",
+      "salt": "859413a890ab60fb0ab1c08f3dda3102",
       "phone": "+44 7700 900999",
       "role": "customer",
       "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
@@ -1202,7 +1202,7 @@
   ],
   "addresses": [
     {
-      "id": "addr-1793270375260",
+      "id": "addr-1793276435545",
       "userId": "usr-1",
       "title": "New Project Site",
       "streetAddress": "100 King Street",
@@ -1213,7 +1213,7 @@
       "country": "United Kingdom",
       "isDefault": false,
       "instructions": "",
-      "createdAt": "2026-10-29T10:39:35.260Z"
+      "createdAt": "2026-10-29T12:20:35.545Z"
     },
     {
       "id": "addr-1793265784434",
@@ -1285,11 +1285,11 @@
   ],
   "bookings": [
     {
-      "id": "bk-1793270375235",
-      "bookingReference": "MAI-BK-84805",
-      "customerId": "usr-1793270375112",
+      "id": "bk-1793276435529",
+      "bookingReference": "MAI-BK-79433",
+      "customerId": "usr-1793276435426",
       "customerName": "New Test Customer",
-      "customerEmail": "test.user.1793270375080@example.com",
+      "customerEmail": "test.user.1793276435355@example.com",
       "serviceId": "srv-pvc-door",
       "serviceTitle": "PVC Door Installation",
       "serviceCategory": "Carpenter",
@@ -1312,8 +1312,45 @@
       "addressSnapshot": null,
       "workDescription": "Front door replacement test",
       "additionalRequirements": "",
-      "createdAt": "2026-10-29T10:39:35.235Z",
-      "updatedAt": "2026-10-29T10:39:35.251Z"
+      "createdAt": "2026-10-29T12:20:35.529Z",
+      "updatedAt": "2026-10-29T12:20:35.538Z"
+    },
+    {
+      "id": "bk-1793274626981",
+      "bookingReference": "MAI-BK-14895",
+      "customerId": "usr-1",
+      "customerName": "Alex Morgan",
+      "customerEmail": "alex@example.com",
+      "serviceId": "srv-end-of-tenancy",
+      "serviceTitle": "End of Tenancy Comprehensive Deep Clean & Sanitization",
+      "serviceCategory": "Home Cleaning",
+      "professionalId": "pro-9",
+      "professionalName": "Elena Rostova",
+      "professionalAvatar": "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80",
+      "serviceDate": "2026-11-05",
+      "timeSlot": "10:00 - 12:00",
+      "durationHours": 2,
+      "quantity": 1,
+      "pricingModel": "fixed",
+      "unitPrice": 180,
+      "subtotal": 180,
+      "serviceFee": 9,
+      "discount": 0,
+      "totalAmount": 189,
+      "bookingStatus": "PENDING",
+      "paymentStatus": "PENDING",
+      "addressId": "addr-1793265784434",
+      "addressSnapshot": {
+        "title": "New Project Site",
+        "streetAddress": "100 King Street",
+        "apartment": "",
+        "city": "London",
+        "postalCode": "W6 0QA"
+      },
+      "workDescription": "",
+      "additionalRequirements": "",
+      "createdAt": "2026-10-29T11:50:26.981Z",
+      "updatedAt": "2026-10-29T11:50:26.981Z"
     },
     {
       "id": "bk-1793265784422",
@@ -1551,20 +1588,20 @@
   ],
   "payments": [
     {
-      "id": "pay-1793270375244",
-      "paymentReference": "MAI-PAY-98525",
-      "bookingId": "bk-1793270375235",
-      "bookingReference": "MAI-BK-84805",
-      "userId": "usr-1793270375112",
+      "id": "pay-1793276435536",
+      "paymentReference": "MAI-PAY-15570",
+      "bookingId": "bk-1793276435529",
+      "bookingReference": "MAI-BK-79433",
+      "userId": "usr-1793276435426",
       "serviceName": "PVC Door Installation",
       "professionalName": "Thomas Jenkins",
       "amount": 315,
       "currency": "GBP",
       "paymentMethod": "Card (Visa ending 4242)",
       "status": "PAID",
-      "transactionId": "txn_mai_1793270375244",
-      "receiptUrl": "/receipts/MAI-PAY-98525.pdf",
-      "createdAt": "2026-10-29T10:39:35.244Z"
+      "transactionId": "txn_mai_1793276435536",
+      "receiptUrl": "/receipts/MAI-PAY-15570.pdf",
+      "createdAt": "2026-10-29T12:20:35.536Z"
     },
     {
       "id": "pay-1793265784427",
@@ -1806,26 +1843,37 @@
   ],
   "notifications": [
     {
-      "id": "notif-1793270375253",
-      "userId": "usr-1793270375112",
+      "id": "notif-1793276435539",
+      "userId": "usr-1793276435426",
       "title": "Payment Successful",
-      "message": "Payment of £315.00 received for PVC Door Installation (MAI-BK-84805).",
+      "message": "Payment of £315.00 received for PVC Door Installation (MAI-BK-79433).",
       "type": "PAYMENT_RECEIVED",
-      "relatedBookingId": "bk-1793270375235",
-      "relatedBookingRef": "MAI-BK-84805",
+      "relatedBookingId": "bk-1793276435529",
+      "relatedBookingRef": "MAI-BK-79433",
       "isRead": false,
-      "createdAt": "2026-10-29T10:39:35.253Z"
+      "createdAt": "2026-10-29T12:20:35.539Z"
     },
     {
-      "id": "notif-1793270375238",
-      "userId": "usr-1793270375112",
+      "id": "notif-1793276435531",
+      "userId": "usr-1793276435426",
       "title": "Booking Request Submitted",
-      "message": "Your booking for PVC Door Installation (MAI-BK-84805) has been created and is pending confirmation.",
+      "message": "Your booking for PVC Door Installation (MAI-BK-79433) has been created and is pending confirmation.",
       "type": "BOOKING_CREATED",
-      "relatedBookingId": "bk-1793270375235",
-      "relatedBookingRef": "MAI-BK-84805",
+      "relatedBookingId": "bk-1793276435529",
+      "relatedBookingRef": "MAI-BK-79433",
       "isRead": false,
-      "createdAt": "2026-10-29T10:39:35.238Z"
+      "createdAt": "2026-10-29T12:20:35.531Z"
+    },
+    {
+      "id": "notif-1793274626984",
+      "userId": "usr-1",
+      "title": "Booking Request Submitted",
+      "message": "Your booking for End of Tenancy Comprehensive Deep Clean & Sanitization (MAI-BK-14895) has been created and is pending confirmation.",
+      "type": "BOOKING_CREATED",
+      "relatedBookingId": "bk-1793274626981",
+      "relatedBookingRef": "MAI-BK-14895",
+      "isRead": false,
+      "createdAt": "2026-10-29T11:50:26.984Z"
     },
     {
       "id": "notif-1793265784429",
@@ -1928,8 +1976,8 @@
   ],
   "supportTickets": [
     {
-      "id": "tck-1793270375286",
-      "ticketReference": "MAI-TCK-44158",
+      "id": "tck-1793276435556",
+      "ticketReference": "MAI-TCK-88979",
       "userId": "usr-1",
       "subject": "Test Inquiry",
       "category": "General Support",
@@ -1939,12 +1987,12 @@
       "responses": [
         {
           "sender": "MAI Support System",
-          "message": "Thank you for reaching out to MAI Support. An agent has been assigned to ticket MAI-TCK-44158 and will review your inquiry shortly.",
-          "createdAt": "2026-10-29T10:39:35.286Z"
+          "message": "Thank you for reaching out to MAI Support. An agent has been assigned to ticket MAI-TCK-88979 and will review your inquiry shortly.",
+          "createdAt": "2026-10-29T12:20:35.556Z"
         }
       ],
-      "createdAt": "2026-10-29T10:39:35.286Z",
-      "updatedAt": "2026-10-29T10:39:35.286Z"
+      "createdAt": "2026-10-29T12:20:35.556Z",
+      "updatedAt": "2026-10-29T12:20:35.556Z"
     },
     {
       "id": "tck-1793265784445",

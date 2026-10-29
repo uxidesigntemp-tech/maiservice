@@ -1,12 +1,16 @@
 # Netlify Production Configuration for MAI Service Marketplace
 [build]
   publish = "dist"
+  functions = "netlify/functions"
   command = "npm run build"
 
 [build.environment]
   NODE_VERSION = "20"
 
-# Header configuration for caching control
+[functions]
+  included_files = ["server/**"]
+
+# Header configuration for caching control and security
 [[headers]]
   for = "/*"
   [headers.values]
@@ -25,7 +29,14 @@
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
-# SPA Fallback: Direct all routes (e.g., /dashboard, /dashboard/professionals, /dashboard/services) to /index.html
+# API Proxy: Route all /api/* requests to Netlify Serverless Function
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+# SPA Fallback: Direct all frontend routes (e.g., /services, /dashboard, /categories) to /index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"

@@ -11,14 +11,21 @@ const getApiBase = () => {
   if (typeof window !== 'undefined') {
     if (window.__MAI_API_BASE__) return window.__MAI_API_BASE__;
     const metaTag = document.querySelector('meta[name="mai-api-base"]');
-    if (metaTag && metaTag.content && !metaTag.content.startsWith('%')) {
-      return metaTag.content.replace(/\/$/, '');
+    if (metaTag && metaTag.content && !metaTag.content.startsWith('%') && metaTag.content.trim() !== '') {
+      return metaTag.content.trim().replace(/\/$/, '');
     }
   }
   return '/api';
 };
 
 const API_BASE = getApiBase();
+
+// Pre-hydrated marketplace catalog data to ensure zero-lag render
+const _maiInitial = (typeof window !== 'undefined' && window.__MAI_INITIAL_DATA__) || {};
+const INITIAL_CATEGORIES = Array.isArray(_maiInitial.categories) ? _maiInitial.categories : [];
+const INITIAL_SUBCATEGORIES = Array.isArray(_maiInitial.subcategories) ? _maiInitial.subcategories : [];
+const INITIAL_SERVICES = Array.isArray(_maiInitial.services) ? _maiInitial.services : [];
+const INITIAL_PROFESSIONALS = Array.isArray(_maiInitial.professionals) ? _maiInitial.professionals : [];
 
 // Client-Side SPA Route Definitions & Path Mappings
 const ROUTE_MAP = {
@@ -2319,11 +2326,11 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Marketplace Data State
-  const [categories, setCategories] = useState([]);
-  const [subcategories, setSubcategories] = useState([]);
-  const [services, setServices] = useState([]);
-  const [professionals, setProfessionals] = useState([]);
+  // Marketplace Data State (Initialized with authoritative catalog data to ensure instant display)
+  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const [subcategories, setSubcategories] = useState(INITIAL_SUBCATEGORIES);
+  const [services, setServices] = useState(INITIAL_SERVICES);
+  const [professionals, setProfessionals] = useState(INITIAL_PROFESSIONALS);
 
   // Customer Data State
   const [bookings, setBookings] = useState([]);

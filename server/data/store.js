@@ -16,7 +16,16 @@ class Store {
         return JSON.parse(raw);
       }
     } catch (e) {
-      console.warn('Could not read db.json, initializing via seed...', e);
+      console.warn('Could not read db.json via fs, attempting fallback require...', e);
+    }
+    // Bundled serverless fallback
+    try {
+      const bundled = require('./db.json');
+      if (bundled && Object.keys(bundled).length > 0) {
+        return JSON.parse(JSON.stringify(bundled));
+      }
+    } catch (e) {
+      // ignore
     }
     // Fallback require seed
     try {

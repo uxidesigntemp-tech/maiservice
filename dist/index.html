@@ -10,6 +10,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta name="mai-build-version" content="2.0.0-20261029">
+  <meta name="mai-api-base" content="">
   
   <!-- Google Fonts: Plus Jakarta Sans & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -134,8 +135,9 @@
 <body class="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1E130F]">
   <div id="root"></div>
 
-  <!-- Load Dashboard & Main React Application with Cache Busting -->
-  <script type="text/babel" src="/dashboard-components.js?v=vmvtev3zt-ovs2e"></script>
-  <script type="text/babel" src="/app.js?v=vmvtev3zt-ovs2e"></script>
+  <!-- Load Pre-hydrated Marketplace Catalog, Dashboard & Main React Application with Cache Busting -->
+  <script src="/initial-data.js?v=vmvtijh4w-x9zfb"></script>
+  <script type="text/babel" src="/dashboard-components.js?v=vmvtijh4w-x9zfb"></script>
+  <script type="text/babel" src="/app.js?v=vmvtijh4w-x9zfb"></script>
 </body>
 </html>

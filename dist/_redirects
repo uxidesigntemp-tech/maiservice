@@ -1,3 +1,2 @@
-# Netlify Redirects File for MAI Service Marketplace
-# SPA Routing Fallback: Route all non-static requests to index.html
-/*    /index.html   200
+/api/*    /.netlify/functions/api/:splat    200!
+/*        /index.html                       200
