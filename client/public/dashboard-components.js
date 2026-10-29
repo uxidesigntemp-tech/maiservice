@@ -85,6 +85,12 @@ function Sidebar({
   ];
 
   const isItemActive = (item) => {
+    if (item.id === 'dashboard-professionals') {
+      return currentView === 'dashboard-professionals' || currentView === 'professionals' || currentView === 'professional-profile';
+    }
+    if (item.id === 'dashboard-services') {
+      return currentView === 'dashboard-services' || currentView === 'services' || currentView === 'service-detail';
+    }
     return currentView === item.id || (item.alias && currentView === item.alias);
   };
 
@@ -2891,6 +2897,7 @@ function BookingDetailModal({
   booking, 
   onClose, 
   onCancelClick, 
+  onRescheduleClick,
   onPayClick, 
   onMessageClick 
 }) {
@@ -2980,12 +2987,22 @@ function BookingDetailModal({
         {/* Actions */}
         <div className="pt-3 border-t border-[#EFECE6] flex flex-wrap items-center justify-between gap-2">
           {booking.bookingStatus !== 'CANCELLED' && booking.bookingStatus !== 'COMPLETED' ? (
-            <button
-              onClick={() => onCancelClick(booking)}
-              className="text-xs font-bold text-red-600 hover:underline"
-            >
-              Cancel Booking
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => onCancelClick(booking)}
+                className="text-xs font-bold text-red-600 hover:underline"
+              >
+                Cancel Booking
+              </button>
+              {onRescheduleClick && (
+                <button
+                  onClick={() => onRescheduleClick(booking)}
+                  className="text-xs font-bold text-[#14223E] hover:underline"
+                >
+                  Reschedule
+                </button>
+              )}
+            </div>
           ) : <span></span>}
 
           <div className="flex items-center gap-2">

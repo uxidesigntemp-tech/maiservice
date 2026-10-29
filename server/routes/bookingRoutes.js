@@ -91,6 +91,22 @@ router.post('/', validateBooking, (req, res) => {
     pro = store.find('professionals', p => p.id === service.professionalId);
   }
 
+  // 2b. Professional Availability & Conflicting Booking Verification
+  if (pro && serviceDate && timeSlot) {
+    const conflict = store.find('bookings', b => 
+      b.professionalId === pro.id &&
+      b.serviceDate === serviceDate &&
+      b.timeSlot === timeSlot &&
+      b.bookingStatus !== 'CANCELLED'
+    );
+    if (conflict) {
+      return res.status(409).json({
+        error: 'Conflict',
+        message: `${pro.name} already has an appointment booked on ${serviceDate} during ${timeSlot}. Please select another arrival window or date.`
+      });
+    }
+  }
+
   // 3. Address resolution
   let addressSnapshot = null;
   let resolvedAddressId = addressId || null;
@@ -258,6 +274,84 @@ router.patch('/:id/cancel', (req, res) => {
 
   res.status(200).json({
     message: 'Booking cancelled successfully',
+    booking: updatedBooking
+  });
+});
+
+// 5. RESCHEDULE BOOKING (WITH OWNERSHIP, TRANSITION & AVAILABILITY CHECK)
+router.patch('/:id/reschedule', (req, res) => {
+  const currentUserId = req.user.id;
+  const booking = store.find('bookings', b => b.id === req.params.id || b.bookingReference === req.params.id);
+
+  if (!booking) {
+    return res.status(404).json({ error: 'NotFound', message: `Booking '${req.params.id}' not found.` });
+  }
+
+  // STRICT OWNERSHIP CHECK
+  if (booking.customerId !== currentUserId) {
+    return res.status(403).json({ 
+      error: 'Forbidden', 
+      message: 'Access denied. You can only reschedule your own bookings.' 
+    });
+  }
+
+  // TRANSITION CHECK: Only PENDING or CONFIRMED can be rescheduled
+  if (booking.bookingStatus === 'CANCELLED' || booking.bookingStatus === 'COMPLETED') {
+    return res.status(400).json({ 
+      error: 'InvalidTransition', 
+      message: `Cannot reschedule a ${booking.bookingStatus.toLowerCase()} booking.` 
+    });
+  }
+
+  const { newDate, newTimeSlot, newSlot } = req.body;
+  const targetDate = newDate || req.body.serviceDate;
+  const targetSlot = newTimeSlot || newSlot || req.body.timeSlot;
+
+  if (!targetDate || !targetSlot) {
+    return res.status(400).json({ 
+      error: 'ValidationError', 
+      message: 'Both newDate and newTimeSlot are required to reschedule.' 
+    });
+  }
+
+  // Availability / Conflict Check for assigned specialist
+  if (booking.professionalId) {
+    const conflict = store.find('bookings', b => 
+      b.id !== booking.id &&
+      b.professionalId === booking.professionalId &&
+      b.serviceDate === targetDate &&
+      b.timeSlot === targetSlot &&
+      b.bookingStatus !== 'CANCELLED'
+    );
+    if (conflict) {
+      return res.status(409).json({ 
+        error: 'Conflict', 
+        message: `The assigned specialist already has a booking scheduled on ${targetDate} during ${targetSlot}. Please select another slot.` 
+      });
+    }
+  }
+
+  const updatedBooking = store.update('bookings', booking.id, {
+    serviceDate: targetDate,
+    timeSlot: targetSlot,
+    updatedAt: new Date().toISOString()
+  });
+
+  // Notification
+  store.insert('notifications', {
+    id: 'notif-' + Date.now(),
+    userId: currentUserId,
+    title: 'Booking Rescheduled',
+    message: `Your booking ${booking.bookingReference} has been rescheduled to ${targetDate} (${targetSlot}).`,
+    type: 'BOOKING_RESCHEDULED',
+    relatedBookingId: booking.id,
+    relatedBookingRef: booking.bookingReference,
+    isRead: false,
+    createdAt: new Date().toISOString()
+  });
+
+  res.status(200).json({
+    message: 'Booking rescheduled successfully',
     booking: updatedBooking
   });
 });

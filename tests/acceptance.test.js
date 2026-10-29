@@ -153,15 +153,19 @@ async function runTests() {
     // ----------------------------------------------------
     console.log('\n[WORKFLOW E] Complete Booking & Payment Workflow:');
     
-    // Create new booking for PVC door
+    // Create new booking for PVC door with a unique test date
+    const uniqueDay = String(10 + Math.floor(Math.random() * 18)).padStart(2, '0');
+    const testServiceDate = `2027-01-${uniqueDay}`;
+    const testTimeSlot = '10:00 - 12:00';
+
     const bookingRes = await request('/api/bookings', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${newCustomerToken}` },
       body: {
         serviceId: 'srv-pvc-door',
         professionalId: 'pro-10',
-        serviceDate: '2026-11-15',
-        timeSlot: '10:00 - 12:00',
+        serviceDate: testServiceDate,
+        timeSlot: testTimeSlot,
         durationHours: 3,
         workDescription: 'Front door replacement test'
       }
@@ -174,6 +178,21 @@ async function runTests() {
     assert(createdBk.subtotal === 300, 'Subtotal correctly computed on backend as £300 (3 hrs * £100)');
     assert(createdBk.totalAmount === 315, 'Total computed with 5% service fee (£315)');
     assert(createdBk.bookingStatus === 'PENDING', 'Initial booking status is PENDING');
+
+    // Verify Conflict Prevention: Another customer attempting same pro + date + slot
+    const conflictRes = await request('/api/bookings', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${alexToken}` },
+      body: {
+        serviceId: 'srv-pvc-door',
+        professionalId: 'pro-10',
+        serviceDate: testServiceDate,
+        timeSlot: testTimeSlot,
+        durationHours: 2,
+        workDescription: 'Conflicting booking attempt'
+      }
+    });
+    assert(conflictRes.status === 409, 'Conflict prevention active: returns 409 Conflict when pro has overlapping appointment');
 
     // Process payment
     const payRes = await request('/api/payments/pay', {
@@ -195,6 +214,26 @@ async function runTests() {
     });
     const foundBk = userBookingsRes.data.find(b => b.id === createdBk.id);
     assert(foundBk && foundBk.paymentStatus === 'PAID', 'Booking appears in My Bookings with PAID status');
+
+    // Verify Rescheduling flow: PATCH /api/bookings/:id/reschedule
+    const rescheduleRes = await request(`/api/bookings/${createdBk.id}/reschedule`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${newCustomerToken}` },
+      body: {
+        serviceDate: `2027-02-01`,
+        timeSlot: '14:00 - 16:00',
+        reason: 'Customer schedule change'
+      }
+    });
+    assert(rescheduleRes.status === 200 && rescheduleRes.data.booking.timeSlot === '14:00 - 16:00', 'PATCH /api/bookings/:id/reschedule updates booking slot');
+
+    // Verify Cancellation flow: PATCH /api/bookings/:id/cancel
+    const cancelRes = await request(`/api/bookings/${createdBk.id}/cancel`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${newCustomerToken}` },
+      body: { reason: 'Test flow cancellation' }
+    });
+    assert(cancelRes.status === 200 && cancelRes.data.booking.bookingStatus === 'CANCELLED', 'PATCH /api/bookings/:id/cancel marks booking as CANCELLED with audit');
 
     // ----------------------------------------------------
     // WORKFLOW F: Dashboard & All Modules
@@ -308,6 +347,16 @@ async function runTests() {
     console.error('Test execution error:', err);
     failed++;
   } finally {
+    try {
+      const store = require('../server/data/store');
+      store.set('users', store.get('users').filter(u => !u.email.includes('test.user')));
+      store.set('bookings', store.get('bookings').filter(b => !b.customerEmail || !b.customerEmail.includes('test.user')));
+      store.set('payments', store.get('payments').filter(p => !p.userId || !p.userId.startsWith('usr-179')));
+      store.set('supportTickets', store.get('supportTickets').filter(t => t.subject !== 'Test Inquiry'));
+      store.set('addresses', store.get('addresses').filter(a => a.title !== 'New Project Site'));
+    } catch (e) {
+      // non-critical test cleanup
+    }
     server.close();
     process.exit(failed > 0 ? 1 : 0);
   }

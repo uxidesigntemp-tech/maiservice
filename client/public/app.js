@@ -121,7 +121,7 @@ const getViewFromPath = (path) => {
 
 const fetchAPI = async (endpoint, options = {}) => {
   try {
-    const token = localStorage.getItem('mai_token') || 'demo-token-usr-1';
+    const token = localStorage.getItem('mai_token');
     const headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -1219,8 +1219,10 @@ function MyBookingsPage({
   bookings = [], 
   onSelectBooking, 
   onCancelBooking, 
+  onRescheduleBooking,
   onPayBooking, 
   onMessagePro, 
+  onRebook,
   onNavigate 
 }) {
   const [filter, setFilter] = useState('all');
@@ -1353,12 +1355,41 @@ function MyBookingsPage({
                   </button>
                 )}
 
+                {b.professionalId && onMessagePro && (
+                  <button
+                    onClick={() => onMessagePro(b)}
+                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-[#1E130F] rounded-xl text-xs font-bold transition-colors flex items-center gap-1"
+                  >
+                    <i data-lucide="message-square" className="w-3.5 h-3.5"></i>
+                    Message
+                  </button>
+                )}
+
+                {b.bookingStatus !== 'CANCELLED' && b.bookingStatus !== 'COMPLETED' && onRescheduleBooking && (
+                  <button
+                    onClick={() => onRescheduleBooking(b)}
+                    className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition-colors"
+                  >
+                    Reschedule
+                  </button>
+                )}
+
                 {b.bookingStatus !== 'CANCELLED' && b.bookingStatus !== 'COMPLETED' && (
                   <button
                     onClick={() => onCancelBooking(b)}
                     className="px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors"
                   >
                     Cancel
+                  </button>
+                )}
+
+                {(b.bookingStatus === 'COMPLETED' || b.bookingStatus === 'CANCELLED') && onRebook && (
+                  <button
+                    onClick={() => onRebook(b)}
+                    className="px-3.5 py-2 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold shadow-xs transition-colors flex items-center gap-1"
+                  >
+                    <i data-lucide="repeat" className="w-3.5 h-3.5"></i>
+                    Re-book
                   </button>
                 )}
               </div>
@@ -1377,23 +1408,48 @@ function MyBookingsPage({
 
 function GuidedBookingModal({ 
   service, 
+  initialProfessionalId,
   user, 
   addresses = [], 
   professionals = [], 
   onClose, 
   onSuccessBooking, 
-  onOpenAuth 
+  onOpenAuth,
+  onAddAddress,
+  onMessagePro,
+  onNavigate,
+  onViewInvoice
 }) {
   const [step, setStep] = useState(1);
 
   // Form State
-  const [selectedProId, setSelectedProId] = useState(service?.professionalId || '');
+  const [selectedProId, setSelectedProId] = useState(initialProfessionalId || service?.professionalId || '');
   const [selectedAddrId, setSelectedAddrId] = useState(addresses[0]?.id || '');
   const [serviceDate, setServiceDate] = useState('2026-11-05');
   const [timeSlot, setTimeSlot] = useState('10:00 - 12:00');
   const [durationHours, setDurationHours] = useState(2);
   const [workDescription, setWorkDescription] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
+
+  // Inline address adding state
+  const [showAddAddress, setShowAddAddress] = useState(false);
+  const [newAddrTitle, setNewAddrTitle] = useState('Home');
+  const [newAddrStreet, setNewAddrStreet] = useState('');
+  const [newAddrCity, setNewAddrCity] = useState('London');
+  const [newAddrPostal, setNewAddrPostal] = useState('');
+  const [isAddingAddr, setIsAddingAddr] = useState(false);
+
+  // Sync selectedProId if initialProfessionalId changes
+  useEffect(() => {
+    if (initialProfessionalId) setSelectedProId(initialProfessionalId);
+  }, [initialProfessionalId]);
+
+  // Sync selectedAddrId when addresses change
+  useEffect(() => {
+    if (!selectedAddrId && addresses.length > 0) {
+      setSelectedAddrId(addresses[0].id);
+    }
+  }, [addresses]);
 
   // Payment method selection
   const [paymentMethod, setPaymentMethod] = useState('Card (Visa ending 4242)');
@@ -1403,6 +1459,35 @@ function GuidedBookingModal({
   const [createdPayment, setCreatedPayment] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+
+  const handleSaveInlineAddress = async (e) => {
+    if (e) e.preventDefault();
+    if (!newAddrStreet.trim() || !newAddrPostal.trim()) {
+      alert('Please enter street address and postal code.');
+      return;
+    }
+    setIsAddingAddr(true);
+    const res = await fetchAPI('/addresses', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: newAddrTitle || 'Home',
+        streetAddress: newAddrStreet.trim(),
+        city: newAddrCity.trim() || 'London',
+        postalCode: newAddrPostal.trim(),
+        isDefault: addresses.length === 0
+      })
+    });
+    setIsAddingAddr(false);
+    if (res.ok && res.data) {
+      if (onAddAddress) onAddAddress();
+      setSelectedAddrId(res.data.id);
+      setShowAddAddress(false);
+      setNewAddrStreet('');
+      setNewAddrPostal('');
+    } else {
+      alert(res.data?.message || 'Failed to save address');
+    }
+  };
 
   useEffect(() => {
     if (window.lucide) window.lucide.createIcons();
@@ -1526,14 +1611,30 @@ function GuidedBookingModal({
               The next steps will collect your location, preferred appointment slot, and calculate authoritative backend pricing.
             </p>
 
-            <div className="flex justify-end pt-3">
-              <button
-                onClick={() => setStep(2)}
-                className="px-6 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold"
-              >
-                Continue to Booking Details →
-              </button>
-            </div>
+            {!user ? (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-bold text-amber-900">Sign in required to proceed</p>
+                  <p className="text-[11px] text-amber-700">Please sign in or create an account to proceed with your booking details.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onOpenAuth && onOpenAuth('login')}
+                  className="px-4 py-2 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl font-bold whitespace-nowrap shadow-xs"
+                >
+                  Sign In / Register
+                </button>
+              </div>
+            ) : (
+              <div className="flex justify-end pt-3">
+                <button
+                  onClick={() => setStep(2)}
+                  className="px-6 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold"
+                >
+                  Continue to Booking Details →
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -1541,23 +1642,86 @@ function GuidedBookingModal({
         {step === 2 && (
           <div className="space-y-4 text-xs">
             <div>
-              <label className="font-bold text-gray-700 block mb-1">Service Address</label>
-              {addresses.length === 0 ? (
-                <div className="p-3 bg-amber-50 text-amber-800 rounded-xl">
-                  Please provide your service address in Kensington or London.
+              <div className="flex items-center justify-between mb-1">
+                <label className="font-bold text-gray-700 block">Service Address</label>
+                <button
+                  type="button"
+                  onClick={() => setShowAddAddress(!showAddAddress)}
+                  className="text-[11px] font-bold text-[#DE5426] hover:underline"
+                >
+                  {showAddAddress ? 'Cancel New Address' : '+ Add New Address'}
+                </button>
+              </div>
+
+              {showAddAddress ? (
+                <div className="p-3.5 bg-[#FAF8F5] border border-[#DE5426]/30 rounded-xl space-y-2.5">
+                  <span className="font-bold text-xs text-[#1E130F] block">Add Service Address</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Label (e.g. Home)"
+                      value={newAddrTitle}
+                      onChange={(e) => setNewAddrTitle(e.target.value)}
+                      className="px-3 py-1.5 bg-white border border-[#EFECE6] rounded-lg text-xs"
+                    />
+                    <input
+                      type="text"
+                      placeholder="City (e.g. London)"
+                      value={newAddrCity}
+                      onChange={(e) => setNewAddrCity(e.target.value)}
+                      className="px-3 py-1.5 bg-white border border-[#EFECE6] rounded-lg text-xs"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Street address (e.g. 100 King Street)"
+                    value={newAddrStreet}
+                    onChange={(e) => setNewAddrStreet(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-white border border-[#EFECE6] rounded-lg text-xs"
+                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Postal code (e.g. W6 0QA)"
+                      value={newAddrPostal}
+                      onChange={(e) => setNewAddrPostal(e.target.value)}
+                      className="w-1/2 px-3 py-1.5 bg-white border border-[#EFECE6] rounded-lg text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveInlineAddress}
+                      disabled={isAddingAddr}
+                      className="px-4 py-1.5 bg-[#DE5426] text-white rounded-lg text-xs font-bold hover:bg-[#C8461C] disabled:opacity-50"
+                    >
+                      {isAddingAddr ? 'Saving...' : 'Save & Use'}
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <select
-                  value={selectedAddrId}
-                  onChange={(e) => setSelectedAddrId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl font-semibold"
-                >
-                  {addresses.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.title}: {a.streetAddress}, {a.city} ({a.postalCode})
-                    </option>
-                  ))}
-                </select>
+                addresses.length === 0 ? (
+                  <div className="p-3 bg-amber-50 text-amber-800 rounded-xl flex items-center justify-between">
+                    <span>No saved address found.</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddAddress(true)}
+                      className="font-bold text-xs underline text-[#DE5426]"
+                    >
+                      Add Address Now
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedAddrId}
+                    onChange={(e) => setSelectedAddrId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl font-semibold"
+                  >
+                    {addresses.map(a => (
+                      <option key={a.id} value={a.id}>
+                        {a.title}: {a.streetAddress}, {a.city} ({a.postalCode})
+                      </option>
+                    ))}
+                  </select>
+                )
               )}
             </div>
 
@@ -1607,7 +1771,16 @@ function GuidedBookingModal({
 
             <div className="flex justify-between pt-3">
               <button onClick={() => setStep(1)} className="px-4 py-2 bg-gray-100 rounded-xl font-bold">Back</button>
-              <button onClick={() => setStep(3)} className="px-6 py-2.5 bg-[#DE5426] text-white rounded-xl font-bold">
+              <button
+                onClick={() => {
+                  if (!selectedAddrId && addresses.length === 0) {
+                    setShowAddAddress(true);
+                    return;
+                  }
+                  setStep(3);
+                }}
+                className="px-6 py-2.5 bg-[#DE5426] text-white rounded-xl font-bold"
+              >
                 Select Professional →
               </button>
             </div>
@@ -1811,26 +1984,94 @@ function GuidedBookingModal({
             </div>
 
             <div className="space-y-1">
+              <span className="inline-block px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full border border-emerald-200 uppercase tracking-wide">
+                Booking Status: CONFIRMED
+              </span>
               <h3 className="text-xl font-extrabold text-[#1E130F]">Booking & Payment Confirmed!</h3>
               <p className="text-xs text-gray-500 font-mono">Reference: {createdBooking.bookingReference}</p>
+              {createdPayment && (
+                <p className="text-[11px] text-gray-400 font-mono">Payment Ref: {createdPayment.paymentReference}</p>
+              )}
             </div>
 
-            <p className="text-xs text-gray-600 max-w-md mx-auto leading-relaxed">
-              Your appointment for <strong>{createdBooking.serviceTitle}</strong> with <strong>{createdBooking.professionalName}</strong> is scheduled for <strong>{createdBooking.serviceDate}</strong> ({createdBooking.timeSlot}).
-            </p>
+            {/* Booking Summary Card */}
+            <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#EFECE6] text-left max-w-md mx-auto space-y-2 text-xs">
+              <div className="flex justify-between pb-1 border-b border-[#EFECE6]">
+                <span className="text-gray-500">Service:</span>
+                <span className="font-bold text-[#1E130F]">{createdBooking.serviceTitle}</span>
+              </div>
+              <div className="flex justify-between pb-1 border-b border-[#EFECE6]">
+                <span className="text-gray-500">Professional:</span>
+                <span className="font-bold text-[#1E130F]">{createdBooking.professionalName}</span>
+              </div>
+              <div className="flex justify-between pb-1 border-b border-[#EFECE6]">
+                <span className="text-gray-500">Schedule:</span>
+                <span className="font-bold text-[#1E130F]">{createdBooking.serviceDate} at {createdBooking.timeSlot}</span>
+              </div>
+              <div className="flex justify-between pt-1">
+                <span className="text-gray-500">Total Settled:</span>
+                <span className="font-extrabold text-[#DE5426]">£{createdBooking.totalAmount.toFixed(2)} GBP (Paid)</span>
+              </div>
+            </div>
 
-            <div className="pt-4 flex justify-center gap-3">
+            <div className="pt-2 flex flex-wrap justify-center gap-2.5">
               <button
-                onClick={() => { onClose(); }}
-                className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-[#1E130F] rounded-xl text-xs font-bold"
+                type="button"
+                onClick={() => {
+                  onClose();
+                  if (onNavigate) onNavigate('my-bookings');
+                  else if (window.__maiNavigate) window.__maiNavigate('my-bookings');
+                }}
+                className="px-5 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5"
               >
-                Close & Return
+                <i data-lucide="calendar" className="w-4 h-4"></i>
+                View in My Bookings
               </button>
+              
+              {createdBooking.professionalId && onMessagePro && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const pid = createdBooking.professionalId;
+                    const bid = createdBooking.id;
+                    onClose();
+                    onMessagePro(pid, bid);
+                  }}
+                  className="px-4 py-2.5 bg-[#14223E] hover:bg-[#1C2F56] text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
+                >
+                  <i data-lucide="message-square" className="w-4 h-4"></i>
+                  Message Professional
+                </button>
+              )}
+
+              {createdPayment && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onViewInvoice) {
+                      onClose();
+                      onViewInvoice(createdPayment);
+                    } else {
+                      window.print();
+                    }
+                  }}
+                  className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-[#1E130F] rounded-xl text-xs font-bold flex items-center gap-1.5"
+                >
+                  <i data-lucide="receipt" className="w-4 h-4"></i>
+                  Download Receipt
+                </button>
+              )}
+
               <button
-                onClick={() => { onClose(); if (window.__maiNavigate) window.__maiNavigate('my-bookings'); }}
-                className="px-6 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold shadow-xs"
+                type="button"
+                onClick={() => {
+                  onClose();
+                  if (onNavigate) onNavigate('home');
+                  else if (window.__maiNavigate) window.__maiNavigate('home');
+                }}
+                className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold"
               >
-                View in My Bookings →
+                Back to Home
               </button>
             </div>
           </div>
@@ -2375,22 +2616,20 @@ function App() {
 
   // Check Current Auth Session
   useEffect(() => {
-    fetchAPI('/auth/me').then(r => {
-      if (r.ok && r.data && r.data.user) {
-        setUser(r.data.user);
-      } else {
-        // Fallback default client Alex Morgan for local demo testing
-        setUser({
-          id: "usr-1",
-          name: "Alex Morgan",
-          email: "alex@example.com",
-          phone: "+44 7700 900077",
-          role: "customer",
-          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-          location: "Kensington, London W8 4EP, UK"
-        });
-      }
-    });
+    const storedToken = localStorage.getItem('mai_token');
+    if (storedToken) {
+      fetchAPI('/auth/me').then(r => {
+        if (r.ok && r.data && r.data.user) {
+          setUser(r.data.user);
+        } else {
+          localStorage.removeItem('mai_token');
+          setUser(null);
+          setToken(null);
+        }
+      });
+    } else {
+      setUser(null);
+    }
   }, [token]);
 
   // Load User Data when authenticated
@@ -2468,35 +2707,101 @@ function App() {
 
     // Workflow C & D: If user was trying to book a service before login, resume booking flow!
     if (pendingBookingService) {
-      setSelectedService(pendingBookingService);
+      if (pendingBookingService.service) {
+        setSelectedService(pendingBookingService.service);
+      }
+      if (pendingBookingService.proId) {
+        const pro = professionals.find(p => p.id === pendingBookingService.proId);
+        if (pro) setSelectedPro(pro);
+      }
       setBookingModalOpen(true);
       setPendingBookingService(null);
     }
   };
 
   const handleLogout = async () => {
-    await fetchAPI('/auth/logout', { method: 'POST' });
+    try {
+      await fetchAPI('/auth/logout', { method: 'POST' });
+    } catch (e) {}
     localStorage.removeItem('mai_token');
     setUser(null);
     setToken(null);
+    setBookings([]);
+    setPayments([]);
+    setSavedItems([]);
+    setAddresses([]);
+    setNotifications([]);
+    setConversations([]);
+    setActiveMessages([]);
     handleNavigate('home');
   };
 
   // Booking Flow Trigger
-  const handleStartBooking = (serviceItem) => {
+  const handleStartBooking = (serviceItem, preferredProId) => {
+    let resolvedService = serviceItem;
+    let proId = preferredProId;
+
+    if (serviceItem && serviceItem.professionalId && !proId) {
+      proId = serviceItem.professionalId;
+    }
+
+    if (!serviceItem || !serviceItem.id) {
+      resolvedService = services[0] || null;
+    }
+
+    if (proId) {
+      const pro = professionals.find(p => p.id === proId);
+      if (pro) setSelectedPro(pro);
+    }
+
     if (!user) {
-      // Auth gated: Preserve intended service and prompt login
-      setPendingBookingService(serviceItem);
+      // Auth gated: Preserve intended service and pro, prompt login
+      setPendingBookingService({ service: resolvedService, proId });
       handleOpenAuth('login');
       return;
     }
 
-    if (serviceItem && serviceItem.id) {
-      setSelectedService(serviceItem);
-    } else {
-      setSelectedService(services[0] || null);
-    }
+    setSelectedService(resolvedService);
     setBookingModalOpen(true);
+  };
+
+  // Reschedule Handlers
+  const handleRescheduleBooking = (booking) => {
+    setSelectedBooking(booking);
+    setRescheduleModalOpen(true);
+  };
+
+  const handleConfirmReschedule = async (bookingId, newDate, newSlot) => {
+    const r = await fetchAPI(`/bookings/${bookingId}/reschedule`, {
+      method: 'PATCH',
+      body: JSON.stringify({ newDate, newTimeSlot: newSlot })
+    });
+    setRescheduleModalOpen(false);
+    if (r.ok) {
+      loadUserData();
+      alert('Booking rescheduled successfully!');
+    } else {
+      alert(r.data?.message || 'Failed to reschedule booking.');
+    }
+  };
+
+  // Message Specialist Directly
+  const handleStartMessageWithPro = async (professionalId, bookingId) => {
+    if (!user) {
+      handleOpenAuth('login');
+      return;
+    }
+    const r = await fetchAPI('/messages/conversations', {
+      method: 'POST',
+      body: JSON.stringify({ professionalId, bookingId })
+    });
+    if (r.ok && r.data) {
+      setActiveConvId(r.data.id);
+      fetchAPI('/messages/conversations').then(res => res.ok && setConversations(res.data));
+      handleNavigate('messages');
+    } else {
+      handleNavigate('messages');
+    }
   };
 
   // Saved Items Handlers
@@ -2583,12 +2888,13 @@ function App() {
     }
   };
 
-  // Check if current view is a dashboard view
-  const isDashboardView = [
+  // Check if current view is a dashboard view (only active if user is authenticated)
+  const isDashboardView = !!user && [
     'dashboard', 'dashboard-professionals', 'dashboard-services',
     'my-bookings', 'payments', 'messages', 
     'saved', 'profile', 'addresses', 'notifications', 
-    'settings', 'help'
+    'settings', 'help',
+    'professional-profile', 'service-detail'
   ].includes(currentView);
 
   return (
@@ -2678,10 +2984,56 @@ function App() {
               bookings={bookings}
               onSelectBooking={(b) => { setSelectedBooking(b); setBookingDetailModalOpen(true); }}
               onCancelBooking={handleCancelBooking}
+              onRescheduleBooking={handleRescheduleBooking}
               onPayBooking={handlePayBooking}
-              onMessagePro={(b) => { handleNavigate('messages'); }}
+              onMessagePro={(b) => handleStartMessageWithPro(b.professionalId, b.id)}
+              onRebook={(b) => {
+                const srv = services.find(s => s.id === b.serviceId) || {
+                  id: b.serviceId,
+                  title: b.serviceTitle,
+                  price: b.unitPrice,
+                  pricingModel: b.pricingModel,
+                  categoryName: b.serviceCategory
+                };
+                handleStartBooking(srv, b.professionalId);
+              }}
               onNavigate={handleNavigate}
             />
+          )}
+
+          {currentView === 'professional-profile' && (
+            <div className="space-y-6">
+              <ProfessionalProfilePage 
+                pro={selectedPro || professionals[0]}
+                onBack={() => handleNavigate('dashboard-professionals')}
+                onSelectService={(s) => {
+                  const fullService = services.find(item => item.id === (s?.id || s)) || s;
+                  setSelectedService(fullService);
+                  handleNavigate('service-detail');
+                }}
+                onBookPro={(p, srv) => handleStartBooking(srv || { professionalId: (p?.id || p) }, p?.id)}
+                onMessagePro={(p) => handleStartMessageWithPro(p?.id || p)}
+                isSaved={savedItems.some(s => s.itemId === (selectedPro?.id || professionals[0]?.id))}
+                onToggleSave={handleToggleSave}
+              />
+            </div>
+          )}
+
+          {currentView === 'service-detail' && (
+            <div className="space-y-6">
+              <ServiceDetailPage 
+                service={selectedService || services[0]}
+                onBack={() => handleNavigate('dashboard-services')}
+                onBookService={handleStartBooking}
+                onSelectPro={(p) => {
+                  const fullPro = professionals.find(item => item.id === (p?.id || p)) || p;
+                  setSelectedPro(fullPro);
+                  handleNavigate('professional-profile');
+                }}
+                isSaved={savedItems.some(s => s.itemId === (selectedService?.id || services[0]?.id))}
+                onToggleSave={handleToggleSave}
+              />
+            </div>
           )}
 
           {currentView === 'payments' && (
@@ -2823,14 +3175,18 @@ function App() {
             </div>
           )}
 
-          {currentView === 'service-detail' && selectedService && (
+          {currentView === 'service-detail' && (
             <div className="max-w-7xl mx-auto px-4 py-8">
               <ServiceDetailPage 
-                service={selectedService}
+                service={selectedService || services[0]}
                 onBack={() => handleNavigate('services')}
                 onBookService={handleStartBooking}
-                onSelectPro={(p) => { setSelectedPro(p); handleNavigate('professional-profile'); }}
-                isSaved={savedItems.some(s => s.itemId === selectedService.id)}
+                onSelectPro={(p) => {
+                  const fullPro = professionals.find(item => item.id === (p?.id || p)) || p;
+                  setSelectedPro(fullPro);
+                  handleNavigate('professional-profile');
+                }}
+                isSaved={savedItems.some(s => s.itemId === (selectedService?.id || services[0]?.id))}
                 onToggleSave={handleToggleSave}
               />
             </div>
@@ -2841,20 +3197,29 @@ function App() {
               <ProfessionalsPage 
                 professionals={professionals}
                 categories={categories}
-                onSelectPro={(p) => { setSelectedPro(p); handleNavigate('professional-profile'); }}
-                onBookPro={(p, srv) => handleStartBooking(srv || { professionalId: p.id })}
+                onSelectPro={(p) => {
+                  const fullPro = professionals.find(item => item.id === (p?.id || p)) || p;
+                  setSelectedPro(fullPro);
+                  handleNavigate('professional-profile');
+                }}
+                onBookPro={(p, srv) => handleStartBooking(srv || { professionalId: (p?.id || p) }, p?.id)}
               />
             </div>
           )}
 
-          {currentView === 'professional-profile' && selectedPro && (
+          {currentView === 'professional-profile' && (
             <div className="max-w-7xl mx-auto px-4 py-8">
               <ProfessionalProfilePage 
-                pro={selectedPro}
+                pro={selectedPro || professionals[0]}
                 onBack={() => handleNavigate('professionals')}
-                onSelectService={(s) => { setSelectedService(s); handleNavigate('service-detail'); }}
-                onBookPro={(p, srv) => handleStartBooking(srv || { professionalId: p.id })}
-                isSaved={savedItems.some(s => s.itemId === selectedPro.id)}
+                onSelectService={(s) => {
+                  const fullService = services.find(item => item.id === (s?.id || s)) || s;
+                  setSelectedService(fullService);
+                  handleNavigate('service-detail');
+                }}
+                onBookPro={(p, srv) => handleStartBooking(srv || { professionalId: (p?.id || p) }, p?.id)}
+                onMessagePro={(p) => handleStartMessageWithPro(p?.id || p)}
+                isSaved={savedItems.some(s => s.itemId === (selectedPro?.id || professionals[0]?.id))}
                 onToggleSave={handleToggleSave}
               />
             </div>
@@ -2875,12 +3240,17 @@ function App() {
       {bookingModalOpen && selectedService && (
         <GuidedBookingModal
           service={selectedService}
+          initialProfessionalId={selectedPro?.id}
           user={user}
           addresses={addresses}
           professionals={professionals}
           onClose={() => setBookingModalOpen(false)}
           onSuccessBooking={loadUserData}
           onOpenAuth={handleOpenAuth}
+          onAddAddress={loadUserData}
+          onMessagePro={(proId, bookingId) => handleStartMessageWithPro(proId, bookingId)}
+          onNavigate={handleNavigate}
+          onViewInvoice={(pay) => { setSelectedInvoice(pay); setInvoiceModalOpen(true); }}
         />
       )}
 
@@ -2890,8 +3260,18 @@ function App() {
           booking={selectedBooking}
           onClose={() => setBookingDetailModalOpen(false)}
           onCancelClick={(b) => { setBookingDetailModalOpen(false); handleCancelBooking(b); }}
+          onRescheduleClick={(b) => { setBookingDetailModalOpen(false); handleRescheduleBooking(b); }}
           onPayClick={(b) => { setBookingDetailModalOpen(false); handlePayBooking(b); }}
-          onMessageClick={(b) => { setBookingDetailModalOpen(false); handleNavigate('messages'); }}
+          onMessageClick={(b) => { setBookingDetailModalOpen(false); handleStartMessageWithPro(b.professionalId, b.id); }}
+        />
+      )}
+
+      {/* RESCHEDULE MODAL */}
+      {rescheduleModalOpen && selectedBooking && (
+        <RescheduleModal 
+          booking={selectedBooking}
+          onClose={() => setRescheduleModalOpen(false)}
+          onConfirmReschedule={handleConfirmReschedule}
         />
       )}
 

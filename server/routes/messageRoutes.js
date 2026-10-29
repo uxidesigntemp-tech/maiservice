@@ -67,8 +67,8 @@ router.post('/conversations/:id/messages', (req, res) => {
     });
   }
 
-  const { content } = req.body;
-  if (!content || !content.trim()) {
+  const content = (req.body.content || req.body.text || req.body.message || '').trim();
+  if (!content) {
     return res.status(400).json({ error: 'ValidationError', message: 'Message content cannot be empty.' });
   }
 
