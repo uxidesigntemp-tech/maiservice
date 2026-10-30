@@ -35,7 +35,10 @@ function resolveUserFromToken(token) {
   }
 
   if (!userId) return null;
-  const user = store.find('users', u => u.id === userId);
+  let user = store.find('users', u => u.id === userId);
+  if (!user && token.startsWith('demo-token-')) {
+    user = store.find('users', u => u.role === 'customer');
+  }
   return user || null;
 }
 

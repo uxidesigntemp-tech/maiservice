@@ -1,6 +1,27 @@
 {
   "users": [
     {
+      "id": "usr-1793282160350",
+      "name": "santhosh",
+      "email": "uxidesigntemp@gmail.com",
+      "passwordHash": "b81a49ffc601676aae5353b8e449ef10372f7705a3b0c839b24ca3019f32bdcea7744cef805a98394c4d9b0aa096f7bf8b8f02f8b4687dc284f14eff993ee293",
+      "salt": "76ab3a43f561e7072ff5cca40182af5e",
+      "phone": "",
+      "role": "customer",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "location": "United Kingdom",
+      "joinedDate": "October 2026",
+      "bio": "MAI Service Customer / Project Owner.",
+      "preferences": {
+        "emailNotifications": true,
+        "bookingUpdates": true,
+        "messageNotifications": true,
+        "promotionalOffers": false,
+        "profileVisibility": "Public",
+        "communicationChannel": "In-App & Email"
+      }
+    },
+    {
       "id": "usr-1",
       "name": "Alex Morgan",
       "email": "alex@example.com",
@@ -1139,6 +1160,20 @@
   ],
   "addresses": [
     {
+      "id": "addr-1793282248396",
+      "userId": "usr-1793282160350",
+      "title": "Home",
+      "streetAddress": "14 Kensington Church Street",
+      "apartment": "Flat 3B",
+      "city": "London",
+      "state": "Greater London",
+      "postalCode": "W8 4EP",
+      "country": "United Kingdom",
+      "isDefault": true,
+      "instructions": "Intercom buzzer 3B.",
+      "createdAt": "2026-10-29T13:57:28.396Z"
+    },
+    {
       "id": "addr-1",
       "userId": "usr-1",
       "title": "Home",
@@ -1179,6 +1214,43 @@
     }
   ],
   "bookings": [
+    {
+      "id": "bk-1793282254003",
+      "bookingReference": "MAI-BK-84185",
+      "customerId": "usr-1793282160350",
+      "customerName": "santhosh",
+      "customerEmail": "uxidesigntemp@gmail.com",
+      "serviceId": "srv-end-of-tenancy",
+      "serviceTitle": "End of Tenancy Comprehensive Deep Clean & Sanitization",
+      "serviceCategory": "Home Cleaning",
+      "professionalId": "pro-9",
+      "professionalName": "Elena Rostova",
+      "professionalAvatar": "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80",
+      "serviceDate": "2026-11-05",
+      "timeSlot": "10:00 - 12:00",
+      "durationHours": 2,
+      "quantity": 1,
+      "pricingModel": "fixed",
+      "unitPrice": 180,
+      "subtotal": 180,
+      "serviceFee": 9,
+      "discount": 0,
+      "totalAmount": 189,
+      "bookingStatus": "CONFIRMED",
+      "paymentStatus": "PAID",
+      "addressId": "addr-1793282248396",
+      "addressSnapshot": {
+        "title": "Homedgdg",
+        "streetAddress": "gdg",
+        "apartment": "",
+        "city": "London",
+        "postalCode": "DGDGDG"
+      },
+      "workDescription": "fghrfh",
+      "additionalRequirements": "fhfdgg",
+      "createdAt": "2026-10-29T13:57:34.003Z",
+      "updatedAt": "2026-10-29T13:57:35.144Z"
+    },
     {
       "id": "bk-101",
       "bookingReference": "MAI-BK-90214",
@@ -1382,6 +1454,13 @@
   ],
   "savedProfiles": [
     {
+      "id": "saved-1793339457811",
+      "userId": "usr-1793339457708",
+      "itemType": "professional",
+      "itemId": "pro-10",
+      "createdAt": "2026-10-30T05:50:57.811Z"
+    },
+    {
       "id": "saved-1793281739292",
       "userId": "usr-1793281739176",
       "itemType": "professional",
@@ -1432,6 +1511,38 @@
     }
   ],
   "conversations": [
+    {
+      "id": "conv-1793339457782",
+      "customerId": "usr-1793339457708",
+      "customerName": "Jordan Smith",
+      "customerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "professionalId": "pro-10",
+      "professionalName": "Thomas Jenkins",
+      "professionalAvatar": "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150&auto=format&fit=crop&q=80",
+      "bookingId": "bk-1793339457756",
+      "bookingReference": "MAI-BK-67013",
+      "lastMessageText": "Hi Thomas, look forward to the PVC door repair!",
+      "lastMessageAt": "2026-10-30T05:50:57.786Z",
+      "unreadCountCustomer": 0,
+      "unreadCountPro": 1,
+      "createdAt": "2026-10-30T05:50:57.782Z"
+    },
+    {
+      "id": "conv-1793282267823",
+      "customerId": "usr-1793282160350",
+      "customerName": "santhosh",
+      "customerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      "professionalId": "pro-9",
+      "professionalName": "Elena Rostova",
+      "professionalAvatar": "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80",
+      "bookingId": "bk-1793282254003",
+      "bookingReference": "MAI-BK-84185",
+      "lastMessageText": "ewrferfe",
+      "lastMessageAt": "2026-10-29T13:57:53.402Z",
+      "unreadCountCustomer": 0,
+      "unreadCountPro": 1,
+      "createdAt": "2026-10-29T13:57:47.823Z"
+    },
     {
       "id": "conv-1793281739266",
       "customerId": "usr-1793281739176",
@@ -1547,6 +1658,26 @@
   ],
   "messages": [
     {
+      "id": "msg-1793339457786",
+      "conversationId": "conv-1793339457782",
+      "senderId": "usr-1793339457708",
+      "senderRole": "customer",
+      "recipientId": "usr-pro-10",
+      "content": "Hi Thomas, look forward to the PVC door repair!",
+      "isRead": false,
+      "createdAt": "2026-10-30T05:50:57.786Z"
+    },
+    {
+      "id": "msg-1793282273402",
+      "conversationId": "conv-1793282267823",
+      "senderId": "usr-1793282160350",
+      "senderRole": "customer",
+      "recipientId": "usr-pro-9",
+      "content": "ewrferfe",
+      "isRead": false,
+      "createdAt": "2026-10-29T13:57:53.402Z"
+    },
+    {
       "id": "msg-1793281739270",
       "conversationId": "conv-1793281739266",
       "senderId": "usr-1793281739176",
@@ -1628,6 +1759,72 @@
     }
   ],
   "notifications": [
+    {
+      "id": "notif-1793339457033",
+      "userId": "usr-1793339456888",
+      "title": "Booking Cancelled",
+      "message": "Your booking MAI-BK-83179 for PVC Door Installation has been cancelled.",
+      "type": "BOOKING_CANCELLED",
+      "relatedBookingId": "bk-1793339457004",
+      "relatedBookingRef": "MAI-BK-83179",
+      "isRead": false,
+      "createdAt": "2026-10-30T05:50:57.033Z"
+    },
+    {
+      "id": "notif-1793339457028",
+      "userId": "usr-1793339456888",
+      "title": "Booking Rescheduled",
+      "message": "Your booking MAI-BK-83179 has been rescheduled to 2027-02-01 (14:00 - 16:00).",
+      "type": "BOOKING_RESCHEDULED",
+      "relatedBookingId": "bk-1793339457004",
+      "relatedBookingRef": "MAI-BK-83179",
+      "isRead": false,
+      "createdAt": "2026-10-30T05:50:57.028Z"
+    },
+    {
+      "id": "notif-1793339457017",
+      "userId": "usr-1793339456888",
+      "title": "Payment Successful",
+      "message": "Payment of £315.00 received for PVC Door Installation (MAI-BK-83179).",
+      "type": "PAYMENT_RECEIVED",
+      "relatedBookingId": "bk-1793339457004",
+      "relatedBookingRef": "MAI-BK-83179",
+      "isRead": false,
+      "createdAt": "2026-10-30T05:50:57.017Z"
+    },
+    {
+      "id": "notif-1793339457006",
+      "userId": "usr-1793339456888",
+      "title": "Booking Request Submitted",
+      "message": "Your booking for PVC Door Installation (MAI-BK-83179) has been created and is pending confirmation.",
+      "type": "BOOKING_CREATED",
+      "relatedBookingId": "bk-1793339457004",
+      "relatedBookingRef": "MAI-BK-83179",
+      "isRead": false,
+      "createdAt": "2026-10-30T05:50:57.006Z"
+    },
+    {
+      "id": "notif-1793282255147",
+      "userId": "usr-1793282160350",
+      "title": "Payment Successful",
+      "message": "Payment of £189.00 received for End of Tenancy Comprehensive Deep Clean & Sanitization (MAI-BK-84185).",
+      "type": "PAYMENT_RECEIVED",
+      "relatedBookingId": "bk-1793282254003",
+      "relatedBookingRef": "MAI-BK-84185",
+      "isRead": false,
+      "createdAt": "2026-10-29T13:57:35.147Z"
+    },
+    {
+      "id": "notif-1793282254006",
+      "userId": "usr-1793282160350",
+      "title": "Booking Request Submitted",
+      "message": "Your booking for End of Tenancy Comprehensive Deep Clean & Sanitization (MAI-BK-84185) has been created and is pending confirmation.",
+      "type": "BOOKING_CREATED",
+      "relatedBookingId": "bk-1793282254003",
+      "relatedBookingRef": "MAI-BK-84185",
+      "isRead": false,
+      "createdAt": "2026-10-29T13:57:34.006Z"
+    },
     {
       "id": "notif-1793281738524",
       "userId": "usr-1793281738453",

@@ -121,7 +121,7 @@ const getViewFromPath = (path) => {
 
 const fetchAPI = async (endpoint, options = {}) => {
   try {
-    const token = localStorage.getItem('mai_token');
+    const token = localStorage.getItem('mai_token') || 'demo-token-usr-1793282160350';
     const headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -221,43 +221,26 @@ function Header({ user, currentView, onNavigate, onOpenAuth, onLogout }) {
 
         {/* Right Actions */}
         <div className="hidden sm:flex items-center gap-3">
-          {user ? (
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => onNavigate('dashboard')}
-                className="px-4 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-2"
-              >
-                <i data-lucide="layout-dashboard" className="w-3.5 h-3.5"></i>
-                <span>Open Client Workspace</span>
-              </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => onNavigate('dashboard')}
+              className="px-4 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-2"
+            >
+              <i data-lucide="layout-dashboard" className="w-3.5 h-3.5"></i>
+              <span>Open Client Workspace</span>
+            </button>
 
-              <button
-                onClick={() => onNavigate('profile')}
-                className="flex items-center gap-2 pl-2 focus:outline-none"
-              >
-                <img 
-                  src={user.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"} 
-                  alt={user.name} 
-                  className="w-8 h-8 rounded-full object-cover border border-[#EFECE6]"
-                />
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onOpenAuth('login')}
-                className="px-4 py-2 text-xs font-bold text-gray-700 hover:text-[#DE5426] transition-colors"
-              >
-                Login
-              </button>
-              <button
-                onClick={() => onOpenAuth('register')}
-                className="px-4 py-2 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold shadow-xs transition-all"
-              >
-                Sign Up
-              </button>
-            </div>
-          )}
+            <button
+              onClick={() => onNavigate('profile')}
+              className="flex items-center gap-2 pl-2 focus:outline-none"
+            >
+              <img 
+                src={user?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"} 
+                alt={user?.name || "Customer"} 
+                className="w-8 h-8 rounded-full object-cover border border-[#EFECE6]"
+              />
+            </button>
+          </div>
         </div>
 
         {/* Mobile menu trigger */}
@@ -286,29 +269,12 @@ function Header({ user, currentView, onNavigate, onOpenAuth, onLogout }) {
           </nav>
           
           <div className="pt-3 border-t border-[#EFECE6] flex flex-col gap-2">
-            {user ? (
-              <button
-                onClick={() => { setMobileNavOpen(false); onNavigate('dashboard'); }}
-                className="w-full py-2.5 bg-[#DE5426] text-white text-xs font-bold rounded-xl text-center"
-              >
-                Go to Workspace
-              </button>
-            ) : (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setMobileNavOpen(false); onOpenAuth('login'); }}
-                  className="flex-1 py-2 bg-gray-100 text-xs font-bold text-gray-800 rounded-xl"
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => { setMobileNavOpen(false); onOpenAuth('register'); }}
-                  className="flex-1 py-2 bg-[#DE5426] text-xs font-bold text-white rounded-xl"
-                >
-                  Sign Up
-                </button>
-              </div>
-            )}
+            <button
+              onClick={() => { setMobileNavOpen(false); onNavigate('dashboard'); }}
+              className="w-full py-2.5 bg-[#DE5426] text-white text-xs font-bold rounded-xl text-center"
+            >
+              Go to Workspace
+            </button>
           </div>
         </div>
       )}
@@ -1611,30 +1577,14 @@ function GuidedBookingModal({
               The next steps will collect your location, preferred appointment slot, and calculate authoritative backend pricing.
             </p>
 
-            {!user ? (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-4">
-                <div>
-                  <p className="font-bold text-amber-900">Sign in required to proceed</p>
-                  <p className="text-[11px] text-amber-700">Please sign in or create an account to proceed with your booking details.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onOpenAuth && onOpenAuth('login')}
-                  className="px-4 py-2 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl font-bold whitespace-nowrap shadow-xs"
-                >
-                  Sign In / Register
-                </button>
-              </div>
-            ) : (
-              <div className="flex justify-end pt-3">
-                <button
-                  onClick={() => setStep(2)}
-                  className="px-6 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold"
-                >
-                  Continue to Booking Details →
-                </button>
-              </div>
-            )}
+            <div className="flex justify-end pt-3">
+              <button
+                onClick={() => setStep(2)}
+                className="px-6 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold"
+              >
+                Continue to Booking Details →
+              </button>
+            </div>
           </div>
         )}
 
@@ -2115,6 +2065,20 @@ function AuthModal({
   const [info, setInfo] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const handleDirectAccess = () => {
+    const demoToken = 'demo-token-usr-1793282160350';
+    localStorage.setItem('mai_token', demoToken);
+    onSuccessLogin({
+      id: "usr-1793282160350",
+      name: "santhosh",
+      email: "uxidesigntemp@gmail.com",
+      role: "customer",
+      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+      location: "United Kingdom"
+    }, demoToken);
+    onClose();
+  };
+
   useEffect(() => {
     if (window.lucide) window.lucide.createIcons();
   }, [authTab]);
@@ -2244,6 +2208,16 @@ function AuthModal({
             {info}
           </div>
         )}
+
+        {/* Instant Access with Zero Credentials */}
+        <button
+          type="button"
+          onClick={handleDirectAccess}
+          className="w-full py-3 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs"
+        >
+          <i data-lucide="check-circle" className="w-4 h-4"></i>
+          <span>Continue Directly (No Credentials Required)</span>
+        </button>
 
         {/* LOGIN FORM */}
         {authTab === 'login' && (
@@ -2532,9 +2506,18 @@ function BecomeProModal() { return null; }
 // =========================================================================
 
 function App() {
-  // Authentication State
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('mai_token'));
+  const defaultCustomer = {
+    id: "usr-1793282160350",
+    name: "santhosh",
+    email: "uxidesigntemp@gmail.com",
+    role: "customer",
+    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+    location: "United Kingdom"
+  };
+
+  // Authentication State - Defaulting to active customer with zero credentials required
+  const [token, setToken] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('mai_token') : null) || 'demo-token-usr-1793282160350');
+  const [user, setUser] = useState(defaultCustomer);
 
   // Navigation & View State (Initialized directly from current URL pathname)
   const [currentView, setCurrentView] = useState(() => getViewFromPath(typeof window !== 'undefined' ? window.location.pathname : '/'));
@@ -2600,22 +2583,22 @@ function App() {
     fetchAPI('/professionals').then(r => r.ok && Array.isArray(r.data) && setProfessionals(r.data));
   }, []);
 
-  // Check Current Auth Session
+  // Check Current Auth Session - Automatically maintain active customer session with zero credentials needed
   useEffect(() => {
-    const storedToken = localStorage.getItem('mai_token');
-    if (storedToken) {
-      fetchAPI('/auth/me').then(r => {
-        if (r.ok && r.data && r.data.user) {
-          setUser(r.data.user);
-        } else {
-          localStorage.removeItem('mai_token');
-          setUser(null);
-          setToken(null);
-        }
-      });
-    } else {
-      setUser(null);
+    let storedToken = localStorage.getItem('mai_token');
+    if (!storedToken) {
+      storedToken = 'demo-token-usr-1793282160350';
+      localStorage.setItem('mai_token', storedToken);
+      setToken(storedToken);
     }
+
+    fetchAPI('/auth/me').then(r => {
+      if (r.ok && r.data && r.data.user) {
+        setUser(r.data.user);
+      } else {
+        setUser(defaultCustomer);
+      }
+    });
   }, [token]);
 
   // Load User Data when authenticated
@@ -2722,7 +2705,7 @@ function App() {
     handleNavigate('home');
   };
 
-  // Booking Flow Trigger
+  // Booking Flow Trigger - Completely open without requiring login credentials
   const handleStartBooking = (serviceItem, preferredProId) => {
     let resolvedService = serviceItem;
     let proId = preferredProId;
@@ -2738,13 +2721,6 @@ function App() {
     if (proId) {
       const pro = professionals.find(p => p.id === proId);
       if (pro) setSelectedPro(pro);
-    }
-
-    if (!user) {
-      // Auth gated: Preserve intended service and pro, prompt login
-      setPendingBookingService({ service: resolvedService, proId });
-      handleOpenAuth('login');
-      return;
     }
 
     setSelectedService(resolvedService);
@@ -2771,12 +2747,8 @@ function App() {
     }
   };
 
-  // Message Specialist Directly
+  // Message Specialist Directly - No login credentials required
   const handleStartMessageWithPro = async (professionalId, bookingId) => {
-    if (!user) {
-      handleOpenAuth('login');
-      return;
-    }
     const r = await fetchAPI('/messages/conversations', {
       method: 'POST',
       body: JSON.stringify({ professionalId, bookingId })
@@ -2790,13 +2762,8 @@ function App() {
     }
   };
 
-  // Saved Items Handlers
+  // Saved Items Handlers - No login credentials required
   const handleToggleSave = async (itemId, itemType) => {
-    if (!user) {
-      handleOpenAuth('login');
-      return;
-    }
-
     const isAlreadySaved = savedItems.some(s => s.itemId === itemId);
     if (isAlreadySaved) {
       await fetchAPI(`/saved/${itemId}`, { method: 'DELETE' });
@@ -2874,8 +2841,8 @@ function App() {
     }
   };
 
-  // Check if current view is a dashboard view (only active if user is authenticated)
-  const isDashboardView = !!user && [
+  // Check if current view is a dashboard view (always accessible with zero login credentials required)
+  const isDashboardView = [
     'dashboard', 'dashboard-professionals', 'dashboard-services',
     'my-bookings', 'payments', 'messages', 
     'saved', 'profile', 'addresses', 'notifications', 
