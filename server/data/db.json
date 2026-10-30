@@ -1174,6 +1174,20 @@
       "createdAt": "2026-10-29T13:57:28.396Z"
     },
     {
+      "id": "addr-1793282248397",
+      "userId": "usr-1793282160350",
+      "title": "Office",
+      "streetAddress": "28 Richmond Hill",
+      "apartment": "Suite 4A",
+      "city": "Richmond",
+      "state": "Surrey",
+      "postalCode": "TW10 6QX",
+      "country": "United Kingdom",
+      "isDefault": false,
+      "instructions": "Concierge desk on ground floor. Parking bay 12.",
+      "createdAt": "2026-10-29T14:00:00.000Z"
+    },
+    {
       "id": "addr-1",
       "userId": "usr-1",
       "title": "Home",
@@ -1214,6 +1228,43 @@
     }
   ],
   "bookings": [
+    {
+      "id": "bk-1793339710619",
+      "bookingReference": "MAI-BK-47829",
+      "customerId": "usr-1793282160350",
+      "customerName": "santhosh",
+      "customerEmail": "uxidesigntemp@gmail.com",
+      "serviceId": "srv-end-of-tenancy",
+      "serviceTitle": "End of Tenancy Comprehensive Deep Clean & Sanitization",
+      "serviceCategory": "Home Cleaning",
+      "professionalId": "pro-2",
+      "professionalName": "Marcus Lee",
+      "professionalAvatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
+      "serviceDate": "2026-11-05",
+      "timeSlot": "16:30 - 18:30",
+      "durationHours": 2,
+      "quantity": 1,
+      "pricingModel": "fixed",
+      "unitPrice": 180,
+      "subtotal": 180,
+      "serviceFee": 9,
+      "discount": 0,
+      "totalAmount": 189,
+      "bookingStatus": "CONFIRMED",
+      "paymentStatus": "PAID",
+      "addressId": "addr-1793282248396",
+      "addressSnapshot": {
+        "title": "Home",
+        "streetAddress": "14 Kensington Church Street",
+        "apartment": "Flat 3B",
+        "city": "London",
+        "postalCode": "W8 4EP"
+      },
+      "workDescription": "",
+      "additionalRequirements": "",
+      "createdAt": "2026-10-30T05:55:10.619Z",
+      "updatedAt": "2026-10-30T05:55:13.727Z"
+    },
     {
       "id": "bk-1793282254003",
       "bookingReference": "MAI-BK-84185",
@@ -1387,6 +1438,22 @@
     }
   ],
   "payments": [
+    {
+      "id": "pay-1793339713724",
+      "paymentReference": "MAI-PAY-33123",
+      "bookingId": "bk-1793339710619",
+      "bookingReference": "MAI-BK-47829",
+      "userId": "usr-1793282160350",
+      "serviceName": "End of Tenancy Comprehensive Deep Clean & Sanitization",
+      "professionalName": "Marcus Lee",
+      "amount": 189,
+      "currency": "GBP",
+      "paymentMethod": "Card (Visa ending 4242)",
+      "status": "PAID",
+      "transactionId": "txn_mai_1793339713724",
+      "receiptUrl": "/receipts/MAI-PAY-33123.pdf",
+      "createdAt": "2026-10-30T05:55:13.724Z"
+    },
     {
       "id": "pay-101",
       "paymentReference": "MAI-PAY-90214",
@@ -1759,6 +1826,28 @@
     }
   ],
   "notifications": [
+    {
+      "id": "notif-1793339713729",
+      "userId": "usr-1793282160350",
+      "title": "Payment Successful",
+      "message": "Payment of £189.00 received for End of Tenancy Comprehensive Deep Clean & Sanitization (MAI-BK-47829).",
+      "type": "PAYMENT_RECEIVED",
+      "relatedBookingId": "bk-1793339710619",
+      "relatedBookingRef": "MAI-BK-47829",
+      "isRead": false,
+      "createdAt": "2026-10-30T05:55:13.729Z"
+    },
+    {
+      "id": "notif-1793339710622",
+      "userId": "usr-1793282160350",
+      "title": "Booking Request Submitted",
+      "message": "Your booking for End of Tenancy Comprehensive Deep Clean & Sanitization (MAI-BK-47829) has been created and is pending confirmation.",
+      "type": "BOOKING_CREATED",
+      "relatedBookingId": "bk-1793339710619",
+      "relatedBookingRef": "MAI-BK-47829",
+      "isRead": false,
+      "createdAt": "2026-10-30T05:55:10.622Z"
+    },
     {
       "id": "notif-1793339457033",
       "userId": "usr-1793339456888",

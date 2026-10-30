@@ -1368,6 +1368,7 @@ function AddressesPage({
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAddr, setEditingAddr] = useState(null);
+  const [deletingAddr, setDeletingAddr] = useState(null);
   
   const [formTitle, setFormTitle] = useState('Home');
   const [formStreet, setFormStreet] = useState('');
@@ -1376,10 +1377,23 @@ function AddressesPage({
   const [formPostal, setFormPostal] = useState('');
   const [formInstructions, setFormInstructions] = useState('');
   const [formDefault, setFormDefault] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
     if (window.lucide) window.lucide.createIcons();
-  }, [addresses, modalOpen]);
+  }, [addresses, modalOpen, deletingAddr]);
+
+  // Escape key support to close modals
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (modalOpen) setModalOpen(false);
+        if (deletingAddr) setDeletingAddr(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [modalOpen, deletingAddr]);
 
   const openAdd = () => {
     setEditingAddr(null);
@@ -1390,6 +1404,7 @@ function AddressesPage({
     setFormPostal('');
     setFormInstructions('');
     setFormDefault(addresses.length === 0);
+    setFormErrors({});
     setModalOpen(true);
   };
 
@@ -1402,23 +1417,41 @@ function AddressesPage({
     setFormPostal(addr.postalCode || '');
     setFormInstructions(addr.instructions || '');
     setFormDefault(addr.isDefault || false);
+    setFormErrors({});
     setModalOpen(true);
+  };
+
+  const validateForm = () => {
+    const errs = {};
+    if (!formTitle.trim()) {
+      errs.title = 'Address label is required (e.g. Home, Office).';
+    }
+    if (!formStreet.trim() || formStreet.trim().length < 3) {
+      errs.street = 'Street address is required (at least 3 characters).';
+    }
+    if (!formCity.trim() || formCity.trim().length < 2) {
+      errs.city = 'City is required (at least 2 characters).';
+    }
+    if (!formPostal.trim() || formPostal.trim().length < 3) {
+      errs.postal = 'Valid postal code is required (min 3 characters).';
+    }
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formStreet || !formCity || !formPostal) {
-      alert('Please fill in Street Address, City, and Postal Code.');
+    if (!validateForm()) {
       return;
     }
 
     const payload = {
-      title: formTitle,
-      streetAddress: formStreet,
-      apartment: formApartment,
-      city: formCity,
-      postalCode: formPostal,
-      instructions: formInstructions,
+      title: formTitle.trim(),
+      streetAddress: formStreet.trim(),
+      apartment: formApartment.trim(),
+      city: formCity.trim(),
+      postalCode: formPostal.trim().toUpperCase(),
+      instructions: formInstructions.trim(),
       isDefault: formDefault
     };
 
@@ -1443,6 +1476,7 @@ function AddressesPage({
         </div>
 
         <button
+          type="button"
           onClick={openAdd}
           className="px-5 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-xs transition-colors"
         >
@@ -1451,84 +1485,167 @@ function AddressesPage({
         </button>
       </div>
 
-      {/* Address Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {addresses.map(addr => (
-          <div 
-            key={addr.id}
-            className={`bg-white border rounded-2xl p-5 shadow-xs flex flex-col justify-between transition-all ${
-              addr.isDefault ? 'border-[#DE5426] ring-1 ring-[#DE5426]/20' : 'border-[#EFECE6]'
-            }`}
-          >
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-[#1E130F] flex items-center gap-1.5">
-                  <i data-lucide="map-pin" className="w-4 h-4 text-[#DE5426]"></i>
-                  {addr.title}
-                </span>
-                {addr.isDefault && (
-                  <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
-                    Default
+      {/* Address Cards Grid or Clean Helpful Empty State */}
+      {addresses.length === 0 ? (
+        <div className="bg-white border border-[#EFECE6] rounded-3xl p-12 text-center max-w-xl mx-auto shadow-xs">
+          <div className="w-16 h-16 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center mx-auto text-[#DE5426] mb-4">
+            <i data-lucide="map-pin" className="w-8 h-8"></i>
+          </div>
+          <h3 className="text-lg font-extrabold text-[#1E130F]">No Saved Addresses Yet</h3>
+          <p className="text-xs text-gray-500 mt-2 max-w-md mx-auto leading-relaxed">
+            Save your home, office, or rental properties for effortless 1-click booking and door trade specialist dispatch.
+          </p>
+          <div className="mt-6">
+            <button
+              type="button"
+              onClick={openAdd}
+              className="px-6 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors"
+            >
+              <i data-lucide="plus" className="w-4 h-4"></i>
+              <span>Add Your First Address</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {addresses.map(addr => (
+            <div 
+              key={addr.id}
+              className={`bg-white border rounded-2xl p-5 shadow-xs flex flex-col justify-between transition-all ${
+                addr.isDefault ? 'border-[#DE5426] ring-1 ring-[#DE5426]/20' : 'border-[#EFECE6]'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-[#1E130F] flex items-center gap-1.5">
+                    <i data-lucide="map-pin" className="w-4 h-4 text-[#DE5426]"></i>
+                    {addr.title}
                   </span>
-                )}
+                  {addr.isDefault && (
+                    <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                      Default
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-3 text-xs text-gray-600 space-y-1">
+                  <p className="font-semibold text-[#1E130F]">{addr.streetAddress}</p>
+                  {addr.apartment && <p>{addr.apartment}</p>}
+                  <p>{addr.city}, {addr.postalCode}</p>
+                  <p className="text-gray-400">United Kingdom</p>
+                  {addr.instructions && (
+                    <div className="mt-2.5 p-2 bg-[#FAF8F5] rounded-lg text-[11px] text-gray-500 italic">
+                      "{addr.instructions}"
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div className="mt-3 text-xs text-gray-600 space-y-1">
-                <p className="font-semibold text-[#1E130F]">{addr.streetAddress}</p>
-                {addr.apartment && <p>{addr.apartment}</p>}
-                <p>{addr.city}, {addr.postalCode}</p>
-                <p className="text-gray-400">United Kingdom</p>
-                {addr.instructions && (
-                  <div className="mt-2.5 p-2 bg-[#FAF8F5] rounded-lg text-[11px] text-gray-500 italic">
-                    "{addr.instructions}"
-                  </div>
+              <div className="pt-4 mt-4 border-t border-[#EFECE6] flex items-center justify-between text-xs">
+                {!addr.isDefault ? (
+                  <button
+                    type="button"
+                    onClick={() => onSetDefaultAddress(addr.id)}
+                    className="text-gray-500 hover:text-[#DE5426] font-semibold transition-colors"
+                  >
+                    Set as Default
+                  </button>
+                ) : (
+                  <span></span>
                 )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openEdit(addr)}
+                    className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeletingAddr(addr)}
+                    className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-bold transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
+          ))}
+        </div>
+      )}
 
-            <div className="pt-4 mt-4 border-t border-[#EFECE6] flex items-center justify-between text-xs">
-              {!addr.isDefault && (
-                <button
-                  onClick={() => onSetDefaultAddress(addr.id)}
-                  className="text-gray-500 hover:text-[#DE5426] font-semibold"
-                >
-                  Set as Default
-                </button>
-              )}
-              {addr.isDefault && <span></span>}
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => openEdit(addr)}
-                  className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm(`Delete address '${addr.title}'?`)) {
-                      onDeleteAddress(addr.id);
-                    }
-                  }}
-                  className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-bold"
-                >
-                  Delete
-                </button>
+      {/* Delete Address Confirmation Modal */}
+      {deletingAddr && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          onClick={(e) => { if (e.target === e.currentTarget) setDeletingAddr(null); }}
+        >
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#EFECE6] space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#EFECE6]">
+              <div className="flex items-center gap-2.5 text-red-600">
+                <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                  <i data-lucide="trash-2" className="w-4 h-4"></i>
+                </div>
+                <h3 className="text-base font-bold text-[#1E130F]">Delete Address</h3>
               </div>
+              <button 
+                type="button" 
+                onClick={() => setDeletingAddr(null)} 
+                aria-label="Close modal"
+                className="text-gray-400 hover:text-black p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#DE5426]/30"
+              >
+                <i data-lucide="x" className="w-5 h-5"></i>
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Are you sure you want to remove <strong className="text-[#1E130F]">{deletingAddr.title}</strong> ({deletingAddr.streetAddress}, {deletingAddr.city})?
+              This address will no longer be available for service bookings.
+            </p>
+
+            <div className="pt-3 border-t border-[#EFECE6] flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeletingAddr(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteAddress(deletingAddr.id);
+                  setDeletingAddr(null);
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+              >
+                <i data-lucide="trash-2" className="w-3.5 h-3.5"></i>
+                <span>Delete Address</span>
+              </button>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
       {/* Add / Edit Address Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          onClick={(e) => { if (e.target === e.currentTarget) setModalOpen(false); }}
+        >
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-[#EFECE6] space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#EFECE6]">
               <h3 className="text-lg font-bold text-[#1E130F]">
                 {editingAddr ? 'Edit Address' : 'Add New Address'}
               </h3>
-              <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-black">
+              <button 
+                type="button" 
+                onClick={() => setModalOpen(false)} 
+                aria-label="Close modal"
+                className="text-gray-400 hover:text-black p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#DE5426]/30"
+              >
                 <i data-lucide="x" className="w-5 h-5"></i>
               </button>
             </div>
@@ -1539,11 +1656,18 @@ function AddressesPage({
                 <input
                   type="text"
                   value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
+                  onChange={(e) => {
+                    setFormTitle(e.target.value);
+                    if (formErrors.title) setFormErrors(prev => ({ ...prev, title: null }));
+                  }}
                   placeholder="e.g. Home, Rental Property, Office"
-                  className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl focus:outline-none focus:border-[#DE5426]"
-                  required
+                  className={`w-full px-3.5 py-2 bg-[#FAF8F5] border rounded-xl focus:outline-none ${
+                    formErrors.title ? 'border-red-400 bg-red-50/20' : 'border-[#EFECE6] focus:border-[#DE5426]'
+                  }`}
                 />
+                {formErrors.title && (
+                  <p className="text-[11px] text-red-500 font-semibold mt-1">{formErrors.title}</p>
+                )}
               </div>
 
               <div>
@@ -1551,11 +1675,18 @@ function AddressesPage({
                 <input
                   type="text"
                   value={formStreet}
-                  onChange={(e) => setFormStreet(e.target.value)}
+                  onChange={(e) => {
+                    setFormStreet(e.target.value);
+                    if (formErrors.street) setFormErrors(prev => ({ ...prev, street: null }));
+                  }}
                   placeholder="e.g. 14 Kensington Church Street"
-                  className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl focus:outline-none focus:border-[#DE5426]"
-                  required
+                  className={`w-full px-3.5 py-2 bg-[#FAF8F5] border rounded-xl focus:outline-none ${
+                    formErrors.street ? 'border-red-400 bg-red-50/20' : 'border-[#EFECE6] focus:border-[#DE5426]'
+                  }`}
                 />
+                {formErrors.street && (
+                  <p className="text-[11px] text-red-500 font-semibold mt-1">{formErrors.street}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1574,11 +1705,18 @@ function AddressesPage({
                   <input
                     type="text"
                     value={formCity}
-                    onChange={(e) => setFormCity(e.target.value)}
+                    onChange={(e) => {
+                      setFormCity(e.target.value);
+                      if (formErrors.city) setFormErrors(prev => ({ ...prev, city: null }));
+                    }}
                     placeholder="London"
-                    className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl focus:outline-none focus:border-[#DE5426]"
-                    required
+                    className={`w-full px-3.5 py-2 bg-[#FAF8F5] border rounded-xl focus:outline-none ${
+                      formErrors.city ? 'border-red-400 bg-red-50/20' : 'border-[#EFECE6] focus:border-[#DE5426]'
+                    }`}
                   />
+                  {formErrors.city && (
+                    <p className="text-[11px] text-red-500 font-semibold mt-1">{formErrors.city}</p>
+                  )}
                 </div>
               </div>
 
@@ -1587,11 +1725,18 @@ function AddressesPage({
                 <input
                   type="text"
                   value={formPostal}
-                  onChange={(e) => setFormPostal(e.target.value)}
+                  onChange={(e) => {
+                    setFormPostal(e.target.value);
+                    if (formErrors.postal) setFormErrors(prev => ({ ...prev, postal: null }));
+                  }}
                   placeholder="e.g. W8 4EP"
-                  className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl focus:outline-none focus:border-[#DE5426]"
-                  required
+                  className={`w-full px-3.5 py-2 bg-[#FAF8F5] border rounded-xl focus:outline-none ${
+                    formErrors.postal ? 'border-red-400 bg-red-50/20' : 'border-[#EFECE6] focus:border-[#DE5426]'
+                  }`}
                 />
+                {formErrors.postal && (
+                  <p className="text-[11px] text-red-500 font-semibold mt-1">{formErrors.postal}</p>
+                )}
               </div>
 
               <div>
@@ -1622,13 +1767,13 @@ function AddressesPage({
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-bold"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#DE5426] text-white rounded-xl font-bold hover:bg-[#C8461C]"
+                  className="px-5 py-2 bg-[#DE5426] text-white rounded-xl font-bold hover:bg-[#C8461C] transition-colors"
                 >
                   {editingAddr ? 'Save Changes' : 'Create Address'}
                 </button>
@@ -2664,10 +2809,22 @@ function InvoiceModal({
   payment, 
   onClose 
 }) {
+  useEffect(() => {
+    if (window.lucide) window.lucide.createIcons();
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   if (!payment) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="bg-white rounded-2xl max-w-xl w-full p-6 md:p-8 shadow-2xl border border-[#EFECE6] space-y-6">
         
         {/* Header */}
@@ -2682,7 +2839,12 @@ function InvoiceModal({
             <p className="text-xs text-gray-500 mt-1">Official Payment Receipt & Statement</p>
           </div>
 
-          <button onClick={onClose} className="text-gray-400 hover:text-black p-1">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            aria-label="Close modal" 
+            className="text-gray-400 hover:text-black p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#DE5426]/30"
+          >
             <i data-lucide="x" className="w-5 h-5"></i>
           </button>
         </div>
@@ -2747,12 +2909,14 @@ function InvoiceModal({
           <span className="text-[10px] text-gray-400 font-mono">Txn: {payment.transactionId || 'txn_verified'}</span>
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => window.print()}
               className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-colors"
             >
               Print Receipt
             </button>
             <button
+              type="button"
               onClick={onClose}
               className="px-4 py-2 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold transition-colors"
             >
@@ -2777,19 +2941,41 @@ function CancelBookingModal({
 }) {
   const [reason, setReason] = useState('Change of plans');
 
+  useEffect(() => {
+    if (window.lucide) window.lucide.createIcons();
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   if (!booking) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#EFECE6] space-y-4">
-        <div className="flex items-center gap-2.5 text-red-600">
-          <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center shrink-0">
-            <i data-lucide="alert-triangle" className="w-5 h-5"></i>
+        <div className="flex items-center justify-between pb-3 border-b border-[#EFECE6]">
+          <div className="flex items-center gap-2.5 text-red-600">
+            <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+              <i data-lucide="alert-triangle" className="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[#1E130F]">Cancel Booking?</h3>
+              <span className="text-xs text-gray-500 font-mono">{booking.bookingReference}</span>
+            </div>
           </div>
-          <div>
-            <h3 className="text-base font-bold text-[#1E130F]">Cancel Booking?</h3>
-            <span className="text-xs text-gray-500 font-mono">{booking.bookingReference}</span>
-          </div>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            aria-label="Close modal" 
+            className="text-gray-400 hover:text-black p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#DE5426]/30"
+          >
+            <i data-lucide="x" className="w-5 h-5"></i>
+          </button>
         </div>
 
         <p className="text-xs text-gray-600 leading-relaxed">
@@ -2802,7 +2988,7 @@ function CancelBookingModal({
           <select
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl text-xs font-semibold focus:outline-none"
+            className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl text-xs font-semibold focus:outline-none focus:border-[#DE5426]"
           >
             <option value="Change of plans">Change of plans</option>
             <option value="Need different date">Need different date / time</option>
@@ -2813,14 +2999,16 @@ function CancelBookingModal({
 
         <div className="pt-3 border-t border-[#EFECE6] flex items-center justify-end gap-2">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold"
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors"
           >
             Keep Booking
           </button>
           <button
+            type="button"
             onClick={() => onConfirmCancel(booking.id, reason)}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold"
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors"
           >
             Confirm Cancellation
           </button>
@@ -2838,12 +3026,35 @@ function RescheduleModal({
   const [newDate, setNewDate] = useState(booking?.serviceDate || '2026-11-10');
   const [newSlot, setNewSlot] = useState(booking?.timeSlot || '10:00 - 12:00');
 
+  useEffect(() => {
+    if (window.lucide) window.lucide.createIcons();
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   if (!booking) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-[#EFECE6] space-y-4">
-        <h3 className="text-base font-bold text-[#1E130F]">Reschedule Booking</h3>
+        <div className="flex items-center justify-between pb-3 border-b border-[#EFECE6]">
+          <h3 className="text-base font-bold text-[#1E130F]">Reschedule Booking</h3>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            aria-label="Close modal" 
+            className="text-gray-400 hover:text-black p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#DE5426]/30"
+          >
+            <i data-lucide="x" className="w-5 h-5"></i>
+          </button>
+        </div>
+
         <p className="text-xs text-gray-600">
           Select a new date and time slot for <strong className="text-[#1E130F]">{booking.serviceTitle}</strong> ({booking.bookingReference}).
         </p>
@@ -2855,7 +3066,7 @@ function RescheduleModal({
               type="date"
               value={newDate}
               onChange={(e) => setNewDate(e.target.value)}
-              className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl font-semibold"
+              className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl font-semibold focus:outline-none focus:border-[#DE5426]"
             />
           </div>
 
@@ -2864,7 +3075,7 @@ function RescheduleModal({
             <select
               value={newSlot}
               onChange={(e) => setNewSlot(e.target.value)}
-              className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl font-semibold"
+              className="w-full px-3 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl font-semibold focus:outline-none focus:border-[#DE5426]"
             >
               <option value="09:00 - 11:00">Morning (09:00 - 11:00)</option>
               <option value="11:30 - 13:30">Midday (11:30 - 13:30)</option>
@@ -2874,12 +3085,17 @@ function RescheduleModal({
         </div>
 
         <div className="pt-3 border-t border-[#EFECE6] flex items-center justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 bg-gray-100 rounded-xl text-xs font-bold">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors"
+          >
             Cancel
           </button>
           <button 
+            type="button" 
             onClick={() => onConfirmReschedule(booking.id, newDate, newSlot)} 
-            className="px-4 py-2 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold"
+            className="px-4 py-2 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold transition-colors"
           >
             Save New Time
           </button>
@@ -2901,12 +3117,24 @@ function BookingDetailModal({
   onPayClick, 
   onMessageClick 
 }) {
+  useEffect(() => {
+    if (window.lucide) window.lucide.createIcons();
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   if (!booking) return null;
 
   const addr = booking.addressSnapshot || {};
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 md:p-7 shadow-2xl border border-[#EFECE6] space-y-5 max-h-[90vh] overflow-y-auto">
         
         <div className="flex items-start justify-between pb-3 border-b border-[#EFECE6]">
@@ -2914,7 +3142,12 @@ function BookingDetailModal({
             <span className="font-mono font-bold text-xs text-[#DE5426]">{booking.bookingReference}</span>
             <h3 className="text-lg font-bold text-[#1E130F] mt-0.5">{booking.serviceTitle}</h3>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-black p-1">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            aria-label="Close modal" 
+            className="text-gray-400 hover:text-black p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#DE5426]/30"
+          >
             <i data-lucide="x" className="w-5 h-5"></i>
           </button>
         </div>
@@ -3025,8 +3258,9 @@ function BookingDetailModal({
             )}
 
             <button
+              type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold"
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors"
             >
               Close
             </button>

@@ -1390,6 +1390,7 @@ function GuidedBookingModal({
 
   // Form State
   const [selectedProId, setSelectedProId] = useState(initialProfessionalId || service?.professionalId || '');
+  const [localAddresses, setLocalAddresses] = useState(addresses || []);
   const [selectedAddrId, setSelectedAddrId] = useState(addresses[0]?.id || '');
   const [serviceDate, setServiceDate] = useState('2026-11-05');
   const [timeSlot, setTimeSlot] = useState('10:00 - 12:00');
@@ -1397,23 +1398,27 @@ function GuidedBookingModal({
   const [workDescription, setWorkDescription] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
 
-  // Inline address adding state
+  // Inline address adding state & validation errors
   const [showAddAddress, setShowAddAddress] = useState(false);
   const [newAddrTitle, setNewAddrTitle] = useState('Home');
   const [newAddrStreet, setNewAddrStreet] = useState('');
   const [newAddrCity, setNewAddrCity] = useState('London');
   const [newAddrPostal, setNewAddrPostal] = useState('');
   const [isAddingAddr, setIsAddingAddr] = useState(false);
+  const [addrErrors, setAddrErrors] = useState({});
 
   // Sync selectedProId if initialProfessionalId changes
   useEffect(() => {
     if (initialProfessionalId) setSelectedProId(initialProfessionalId);
   }, [initialProfessionalId]);
 
-  // Sync selectedAddrId when addresses change
+  // Sync localAddresses and selectedAddrId when parent addresses change
   useEffect(() => {
-    if (!selectedAddrId && addresses.length > 0) {
-      setSelectedAddrId(addresses[0].id);
+    if (addresses && addresses.length > 0) {
+      setLocalAddresses(addresses);
+      if (!selectedAddrId) {
+        setSelectedAddrId(addresses[0].id);
+      }
     }
   }, [addresses]);
 
@@ -1426,33 +1431,108 @@ function GuidedBookingModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
 
+  // Keyboard shortcut: close on Escape
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const validateInlineAddress = () => {
+    const errs = {};
+    if (!newAddrStreet.trim() || newAddrStreet.trim().length < 3) {
+      errs.street = 'Street address is required (at least 3 characters).';
+    }
+    if (!newAddrCity.trim() || newAddrCity.trim().length < 2) {
+      errs.city = 'City is required (at least 2 characters).';
+    }
+    if (!newAddrPostal.trim() || newAddrPostal.trim().length < 3) {
+      errs.postal = 'Valid postal code is required (min 3 characters).';
+    }
+    setAddrErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handleSaveInlineAddress = async (e) => {
-    if (e) e.preventDefault();
-    if (!newAddrStreet.trim() || !newAddrPostal.trim()) {
-      alert('Please enter street address and postal code.');
-      return;
+    if (e && e.preventDefault) e.preventDefault();
+    if (!validateInlineAddress()) {
+      return null;
     }
     setIsAddingAddr(true);
+    setAddrErrors({});
     const res = await fetchAPI('/addresses', {
       method: 'POST',
       body: JSON.stringify({
-        title: newAddrTitle || 'Home',
+        title: (newAddrTitle || 'Home').trim(),
         streetAddress: newAddrStreet.trim(),
-        city: newAddrCity.trim() || 'London',
-        postalCode: newAddrPostal.trim(),
-        isDefault: addresses.length === 0
+        city: (newAddrCity || 'London').trim(),
+        postalCode: newAddrPostal.trim().toUpperCase(),
+        isDefault: localAddresses.length === 0
       })
     });
     setIsAddingAddr(false);
     if (res.ok && res.data) {
-      if (onAddAddress) onAddAddress();
-      setSelectedAddrId(res.data.id);
+      const savedAddr = res.data.address || res.data;
+      const newId = savedAddr.id;
+      setLocalAddresses(prev => [savedAddr, ...prev.filter(a => a.id !== newId)]);
+      setSelectedAddrId(newId);
       setShowAddAddress(false);
       setNewAddrStreet('');
       setNewAddrPostal('');
+      setAddrErrors({});
+      if (onAddAddress) onAddAddress();
+      return savedAddr;
     } else {
-      alert(res.data?.message || 'Failed to save address');
+      setAddrErrors({ general: res.data?.message || 'Failed to save address. Please check details.' });
+      return null;
     }
+  };
+
+  const handleProceedFromStep2 = async () => {
+    // If inline form is open and has input, validate and save it automatically
+    if (showAddAddress) {
+      if (newAddrStreet.trim() || newAddrPostal.trim() || localAddresses.length === 0) {
+        const saved = await handleSaveInlineAddress();
+        if (!saved) return;
+      } else {
+        setShowAddAddress(false);
+      }
+    }
+
+    const effectiveAddrId = selectedAddrId || localAddresses[0]?.id;
+    if (!effectiveAddrId) {
+      setShowAddAddress(true);
+      setAddrErrors({ general: 'Please add a service address to continue.' });
+      return;
+    }
+
+    if (!selectedAddrId && effectiveAddrId) {
+      setSelectedAddrId(effectiveAddrId);
+    }
+
+    setStep(3);
+  };
+
+  const handleProceedFromStep3 = () => {
+    if (!selectedProId && professionals.length > 0) {
+      setSelectedProId(professionals[0].id);
+    }
+    setStep(4);
+  };
+
+  const handleProceedFromStep4 = () => {
+    if (!serviceDate) {
+      setErrorMsg('Please select an appointment date.');
+      return;
+    }
+    if (!timeSlot) {
+      setErrorMsg('Please select an arrival time slot.');
+      return;
+    }
+    setErrorMsg(null);
+    setStep(5);
   };
 
   useEffect(() => {
@@ -1469,19 +1549,22 @@ function GuidedBookingModal({
   const totalAmount = parseFloat((subtotal + platformFee).toFixed(2));
 
   const selectedPro = professionals.find(p => p.id === selectedProId) || { name: service.professionalName || 'Assigned Specialist' };
-  const selectedAddr = addresses.find(a => a.id === selectedAddrId) || addresses[0] || { streetAddress: '14 Kensington Church St', city: 'London', postalCode: 'W8 4EP' };
+  const selectedAddr = localAddresses.find(a => a.id === selectedAddrId) || localAddresses[0] || addresses[0] || { streetAddress: '14 Kensington Church St', city: 'London', postalCode: 'W8 4EP' };
 
   // Step 6: Submit Booking to backend
   const handleConfirmBooking = async () => {
     setIsSubmitting(true);
     setErrorMsg(null);
 
+    const targetProId = selectedProId || service.professionalId || professionals[0]?.id;
+    const targetAddrId = selectedAddrId || localAddresses[0]?.id;
+
     const res = await fetchAPI('/bookings', {
       method: 'POST',
       body: JSON.stringify({
         serviceId: service.id,
-        professionalId: selectedProId || service.professionalId,
-        addressId: selectedAddrId,
+        professionalId: targetProId,
+        addressId: targetAddrId,
         serviceDate,
         timeSlot,
         durationHours,
@@ -1526,7 +1609,10 @@ function GuidedBookingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl border border-[#EFECE6] space-y-6 max-h-[92vh] overflow-y-auto">
         
         {/* Progress Bar / Steps Header */}
@@ -1547,7 +1633,12 @@ function GuidedBookingModal({
             </h2>
           </div>
 
-          <button onClick={onClose} className="text-gray-400 hover:text-black p-1">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            aria-label="Close modal" 
+            className="text-gray-400 hover:text-black p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#DE5426]/30"
+          >
             <i data-lucide="x" className="w-5 h-5"></i>
           </button>
         </div>
@@ -1579,6 +1670,7 @@ function GuidedBookingModal({
 
             <div className="flex justify-end pt-3">
               <button
+                type="button"
                 onClick={() => setStep(2)}
                 className="px-6 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl text-xs font-bold"
               >
@@ -1596,7 +1688,10 @@ function GuidedBookingModal({
                 <label className="font-bold text-gray-700 block">Service Address</label>
                 <button
                   type="button"
-                  onClick={() => setShowAddAddress(!showAddAddress)}
+                  onClick={() => {
+                    setShowAddAddress(!showAddAddress);
+                    setAddrErrors({});
+                  }}
                   className="text-[11px] font-bold text-[#DE5426] hover:underline"
                 >
                   {showAddAddress ? 'Cancel New Address' : '+ Add New Address'}
@@ -1606,49 +1701,93 @@ function GuidedBookingModal({
               {showAddAddress ? (
                 <div className="p-3.5 bg-[#FAF8F5] border border-[#DE5426]/30 rounded-xl space-y-2.5">
                   <span className="font-bold text-xs text-[#1E130F] block">Add Service Address</span>
+                  
+                  {addrErrors.general && (
+                    <div className="p-2 bg-red-50 border border-red-200 text-red-600 rounded-lg text-[11px] font-semibold">
+                      {addrErrors.general}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      placeholder="Label (e.g. Home)"
-                      value={newAddrTitle}
-                      onChange={(e) => setNewAddrTitle(e.target.value)}
-                      className="px-3 py-1.5 bg-white border border-[#EFECE6] rounded-lg text-xs"
-                    />
-                    <input
-                      type="text"
-                      placeholder="City (e.g. London)"
-                      value={newAddrCity}
-                      onChange={(e) => setNewAddrCity(e.target.value)}
-                      className="px-3 py-1.5 bg-white border border-[#EFECE6] rounded-lg text-xs"
-                    />
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Label (e.g. Home)"
+                        value={newAddrTitle}
+                        onChange={(e) => {
+                          setNewAddrTitle(e.target.value);
+                          if (addrErrors.title) setAddrErrors(prev => ({ ...prev, title: null }));
+                        }}
+                        className="w-full px-3 py-1.5 bg-white border border-[#EFECE6] rounded-lg text-xs focus:outline-none focus:border-[#DE5426]"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="City (e.g. London)"
+                        value={newAddrCity}
+                        onChange={(e) => {
+                          setNewAddrCity(e.target.value);
+                          if (addrErrors.city) setAddrErrors(prev => ({ ...prev, city: null }));
+                        }}
+                        className={`w-full px-3 py-1.5 bg-white border rounded-lg text-xs focus:outline-none ${
+                          addrErrors.city ? 'border-red-400 bg-red-50/20' : 'border-[#EFECE6] focus:border-[#DE5426]'
+                        }`}
+                      />
+                      {addrErrors.city && (
+                        <p className="text-[11px] text-red-500 font-semibold mt-0.5">{addrErrors.city}</p>
+                      )}
+                    </div>
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Street address (e.g. 100 King Street)"
-                    value={newAddrStreet}
-                    onChange={(e) => setNewAddrStreet(e.target.value)}
-                    className="w-full px-3 py-1.5 bg-white border border-[#EFECE6] rounded-lg text-xs"
-                  />
-                  <div className="flex items-center gap-2">
+
+                  <div>
                     <input
                       type="text"
-                      placeholder="Postal code (e.g. W6 0QA)"
-                      value={newAddrPostal}
-                      onChange={(e) => setNewAddrPostal(e.target.value)}
-                      className="w-1/2 px-3 py-1.5 bg-white border border-[#EFECE6] rounded-lg text-xs"
+                      placeholder="Street address (e.g. 100 King Street)"
+                      value={newAddrStreet}
+                      onChange={(e) => {
+                        setNewAddrStreet(e.target.value);
+                        if (addrErrors.street) setAddrErrors(prev => ({ ...prev, street: null }));
+                      }}
+                      className={`w-full px-3 py-1.5 bg-white border rounded-lg text-xs focus:outline-none ${
+                        addrErrors.street ? 'border-red-400 bg-red-50/20' : 'border-[#EFECE6] focus:border-[#DE5426]'
+                      }`}
                     />
+                    {addrErrors.street && (
+                      <p className="text-[11px] text-red-500 font-semibold mt-0.5">{addrErrors.street}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <div className="w-1/2">
+                      <input
+                        type="text"
+                        placeholder="Postal code (e.g. W6 0QA)"
+                        value={newAddrPostal}
+                        onChange={(e) => {
+                          setNewAddrPostal(e.target.value);
+                          if (addrErrors.postal) setAddrErrors(prev => ({ ...prev, postal: null }));
+                        }}
+                        className={`w-full px-3 py-1.5 bg-white border rounded-lg text-xs focus:outline-none ${
+                          addrErrors.postal ? 'border-red-400 bg-red-50/20' : 'border-[#EFECE6] focus:border-[#DE5426]'
+                        }`}
+                      />
+                      {addrErrors.postal && (
+                        <p className="text-[11px] text-red-500 font-semibold mt-0.5">{addrErrors.postal}</p>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={handleSaveInlineAddress}
                       disabled={isAddingAddr}
-                      className="px-4 py-1.5 bg-[#DE5426] text-white rounded-lg text-xs font-bold hover:bg-[#C8461C] disabled:opacity-50"
+                      className="px-4 py-1.5 bg-[#DE5426] text-white rounded-lg text-xs font-bold hover:bg-[#C8461C] disabled:opacity-50 transition-colors"
                     >
                       {isAddingAddr ? 'Saving...' : 'Save & Use'}
                     </button>
                   </div>
                 </div>
               ) : (
-                addresses.length === 0 ? (
+                localAddresses.length === 0 ? (
                   <div className="p-3 bg-amber-50 text-amber-800 rounded-xl flex items-center justify-between">
                     <span>No saved address found.</span>
                     <button
@@ -1661,11 +1800,11 @@ function GuidedBookingModal({
                   </div>
                 ) : (
                   <select
-                    value={selectedAddrId}
+                    value={selectedAddrId || (localAddresses[0]?.id || '')}
                     onChange={(e) => setSelectedAddrId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl font-semibold"
+                    className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl font-semibold focus:outline-none focus:border-[#DE5426]"
                   >
-                    {addresses.map(a => (
+                    {localAddresses.map(a => (
                       <option key={a.id} value={a.id}>
                         {a.title}: {a.streetAddress}, {a.city} ({a.postalCode})
                       </option>
@@ -1704,7 +1843,7 @@ function GuidedBookingModal({
                 onChange={(e) => setWorkDescription(e.target.value)}
                 placeholder="e.g. Installing replacement PVC double door. Frame is ready on ground floor."
                 rows="2"
-                className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl"
+                className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl focus:outline-none focus:border-[#DE5426]"
               ></textarea>
             </div>
 
@@ -1715,21 +1854,16 @@ function GuidedBookingModal({
                 value={additionalNotes}
                 onChange={(e) => setAdditionalNotes(e.target.value)}
                 placeholder="e.g. Buzzer 3B, parking bay 12 available"
-                className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl"
+                className="w-full px-3.5 py-2 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl focus:outline-none focus:border-[#DE5426]"
               />
             </div>
 
             <div className="flex justify-between pt-3">
-              <button onClick={() => setStep(1)} className="px-4 py-2 bg-gray-100 rounded-xl font-bold">Back</button>
+              <button type="button" onClick={() => setStep(1)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold transition-colors">Back</button>
               <button
-                onClick={() => {
-                  if (!selectedAddrId && addresses.length === 0) {
-                    setShowAddAddress(true);
-                    return;
-                  }
-                  setStep(3);
-                }}
-                className="px-6 py-2.5 bg-[#DE5426] text-white rounded-xl font-bold"
+                type="button"
+                onClick={handleProceedFromStep2}
+                className="px-6 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl font-bold transition-colors"
               >
                 Select Professional →
               </button>
@@ -1766,8 +1900,12 @@ function GuidedBookingModal({
             </div>
 
             <div className="flex justify-between pt-3">
-              <button onClick={() => setStep(2)} className="px-4 py-2 bg-gray-100 rounded-xl font-bold">Back</button>
-              <button onClick={() => setStep(4)} className="px-6 py-2.5 bg-[#DE5426] text-white rounded-xl font-bold">
+              <button type="button" onClick={() => setStep(2)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold transition-colors">Back</button>
+              <button 
+                type="button" 
+                onClick={handleProceedFromStep3} 
+                className="px-6 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl font-bold transition-colors"
+              >
                 Select Date & Time →
               </button>
             </div>
@@ -1783,7 +1921,7 @@ function GuidedBookingModal({
                 type="date"
                 value={serviceDate}
                 onChange={(e) => setServiceDate(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl font-semibold"
+                className="w-full px-3.5 py-2.5 bg-[#FAF8F5] border border-[#EFECE6] rounded-xl font-semibold focus:outline-none focus:border-[#DE5426]"
               />
             </div>
 
@@ -1801,7 +1939,7 @@ function GuidedBookingModal({
                     type="button"
                     onClick={() => setTimeSlot(slot)}
                     className={`p-3 rounded-xl font-bold text-center border transition-all ${
-                      timeSlot === slot ? 'border-[#DE5426] bg-[#DE5426] text-white' : 'border-[#EFECE6] bg-[#FAF8F5] text-gray-700'
+                      timeSlot === slot ? 'border-[#DE5426] bg-[#DE5426] text-white' : 'border-[#EFECE6] bg-[#FAF8F5] text-gray-700 hover:border-gray-300'
                     }`}
                   >
                     {slot}
@@ -1811,8 +1949,12 @@ function GuidedBookingModal({
             </div>
 
             <div className="flex justify-between pt-3">
-              <button onClick={() => setStep(3)} className="px-4 py-2 bg-gray-100 rounded-xl font-bold">Back</button>
-              <button onClick={() => setStep(5)} className="px-6 py-2.5 bg-[#DE5426] text-white rounded-xl font-bold">
+              <button type="button" onClick={() => setStep(3)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold transition-colors">Back</button>
+              <button 
+                type="button" 
+                onClick={handleProceedFromStep4} 
+                className="px-6 py-2.5 bg-[#DE5426] hover:bg-[#C8461C] text-white rounded-xl font-bold transition-colors"
+              >
                 Review Pricing Breakdown →
               </button>
             </div>
@@ -2176,8 +2318,20 @@ function AuthModal({
     }
   };
 
+  // Keyboard shortcut: close on Escape
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="bg-white rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl border border-[#EFECE6] space-y-5">
         
         <div className="flex items-center justify-between pb-3 border-b border-[#EFECE6]">
@@ -2192,7 +2346,12 @@ function AuthModal({
               {authTab === 'reset' && 'Enter New Password'}
             </h3>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-black">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            aria-label="Close modal" 
+            className="text-gray-400 hover:text-black p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#DE5426]/30"
+          >
             <i data-lucide="x" className="w-5 h-5"></i>
           </button>
         </div>
